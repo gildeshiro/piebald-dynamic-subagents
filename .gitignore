@@ -1,0 +1,42 @@
+# === Segredos — NUNCA commitar ===
+*.token
+*token*.txt
+.env
+.env.*
+*.key
+*.pem
+secrets/
+certs/
+*.crt
+*.p12
+auth.json
+
+# === Cópias / dumps do app.db (podem conter prompts, chaves, PII) ===
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+dumps/
+*.dump
+
+# === Artefatos de build ===
+node_modules/
+target/
+dist/
+build/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# === Logs e temporários ===
+*.log
+tmp/
+.tmp/
+*.tmp
+
+# === OS / editor ===
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -28,7 +28,11 @@ sonnet implementam a sessão B"*).
    - **reasoning** ("high/xhigh/low/max") → escolha o `profile_id` cujo effort casa
      (reasoning é SEMPRE via profile, todos os engines). Hoje: **Default (id 1)** =
      anthropic max / openai xhigh; **test (id 4)** = anthropic max / openai high. Se o
-     effort pedido não tem profile, use o mais próximo e **avise**.
+     effort pedido não tem profile, **materialize um na hora** (idempotente):
+     `node control-plane/profiles.mjs ensure <nome> --anth <low|medium|high|max> --oai <low|medium|high|xhigh> --google <int>`
+     — cria o profile e FORKA o config (copy-on-write, Default intacto), retornando o
+     `profile_id` pro spec. (system_prompt do profile ainda não é setável por aqui —
+     só os overrides de reasoning; persona via system_prompt = descoberta futura.)
 
 2. **Monte os specs.** Cada worker:
    ```json

@@ -20,10 +20,11 @@ import { PiebaldWS, getToken, readResult } from "./ws-client.mjs";
 
 const PROJECT_DIR = "C:\\Projects\\piebald-dynamic-subagents";
 const TITLE_PREFIX = "pbsub/"; // marcador p/ cleanup de órfãos
+let _seq = 0; // contador p/ títulos únicos em creates simultâneos
 
 export async function runOne(pb, spec, { resultTimeoutMs = 180000 } = {}) {
   const t0 = Date.now();
-  const title = spec.title || `${TITLE_PREFIX}${spec.model || "?"}-${Date.now() % 100000}`;
+  const title = spec.title || `${TITLE_PREFIX}${spec.model || "?"}-${Date.now() % 100000}-${++_seq}`;
   let chatId = null;
   try {
     chatId = await pb.createChat({

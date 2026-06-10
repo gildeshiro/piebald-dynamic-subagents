@@ -1,73 +1,515 @@
 {
   "_meta": {
-    "generated": "2026-06-10",
-    "source": "app.db model_listing + provider_custom_models + validação ao vivo",
-    "note": "Status: verified=deu 200 e worker rodou; broken=erra hoje no setup; unverified=não testado. Reasoning é SEMPRE herdado do profile (override por engine no generation_config). Para reasoning arbitrário por worker, pré-criar profiles por effort (ver AGENTS.md).",
-    "reasoning_by_engine": {
-      "claude_code": "profile.effort (anthropic). Valores vistos: 'max'. A confirmar no probe: low/medium/high/max.",
-      "openai_responses": "profile.reasoning_effort. Níveis expostos pelo modelo: low|medium|high|xhigh (default medium). + reasoning_summary, text_verbosity.",
-      "google": "profile.thinking_budget (inteiro; -1 = dinâmico)."
-    }
+    "generated": "2026-06-10T23:21:00.300Z",
+    "source": "refresh_provider_models (ao vivo)",
+    "regenerate": "node control-plane/discover-models.mjs",
+    "reasoning_note": "No esquema Piebald, reasoning de TODOS os engines é controlado pelo PROFILE (o generation_config do profile guarda anthropic.effort + openai.reasoning_effort + google.thinking_budget juntos). Selecionar profile = selecionar reasoning. É o único lever de reasoning no nosso setup.",
+    "status_semantics": "status 'ok' = o provider LISTA modelos. NÃO garante que um worker roda de fato (auth/quirk de chat-time). Validar com control-plane/probe.mjs.",
+    "openai_reasoning_levels": [
+      "low",
+      "medium",
+      "high",
+      "xhigh"
+    ],
+    "openai_default_reasoning": "medium"
   },
-
-  "defaults": { "provider_id": 3, "model": "claude-sonnet-4-6", "profile_id": 1 },
-
   "providers": [
     {
-      "id": 3, "name": "Claude Max", "engine": "claude_code", "status": "verified",
-      "reasoning": "profile.effort",
-      "models": [
-        { "id": "claude-opus-4-8", "display": "Claude Opus 4.8", "alias": "opus", "tier": "frontier" },
-        { "id": "claude-opus-4-7", "display": "Claude Opus 4.7" },
-        { "id": "claude-sonnet-4-6", "display": "Claude Sonnet 4.6", "tier": "balanced", "verified": true },
-        { "id": "claude-haiku-4-5-20251001", "display": "Claude Haiku 4.5", "tier": "fast" },
-        { "id": "claude-fable-5", "display": "Claude Fable 5" },
-        { "id": "claude-opus-4-6", "display": "Claude Opus 4.6" },
-        { "id": "claude-opus-4-5-20251101", "display": "Claude Opus 4.5" },
-        { "id": "claude-sonnet-4-5-20250929", "display": "Claude Sonnet 4.5" },
-        { "id": "claude-opus-4-1-20250805", "display": "Claude Opus 4.1" },
-        { "id": "claude-opus-4-20250514", "display": "Claude Opus 4" },
-        { "id": "claude-sonnet-4-20250514", "display": "Claude Sonnet 4" }
-      ]
-    },
-    {
-      "id": 4, "name": "ChatGPT Plus", "engine": "openai_responses", "status": "broken",
-      "reasoning": "profile.reasoning_effort (low|medium|high|xhigh)",
-      "quirks": [
-        "service_tier=flex -> 400 'Unsupported service_tier: flex' no codex. Profile precisa service_tier compatível (ou nulo).",
-        "store=true -> 400 'Store must be set to false'. Profile precisa store=false."
-      ],
-      "models": [
-        { "id": "gpt-5.5", "display": "GPT-5.5", "reasoning_levels": ["low","medium","high","xhigh"], "default_reasoning": "medium", "context": 272000 },
-        { "id": "gpt-5.4", "display": "GPT-5.4", "reasoning_levels": ["low","medium","high","xhigh"], "default_reasoning": "medium" },
-        { "id": "gpt-5.4-mini", "display": "GPT-5.4 mini", "reasoning_levels": ["low","medium","high","xhigh"], "default_reasoning": "medium", "tier": "fast" },
-        { "id": "codex-auto-review", "display": "Codex Auto Review", "reasoning_levels": ["low","medium","high","xhigh"], "internal": true }
-      ]
-    },
-    {
-      "id": 5, "name": "Google (jean)", "engine": "google", "status": "unverified",
-      "reasoning": "profile.thinking_budget",
-      "quirks": ["gemini-3.5-flash deu HTTP 404 no endpoint cloudcode-pa — model-id pode estar incorreto p/ esta conta/engine. Confirmar no probe."],
-      "models": [
-        { "id": "gemini-3.5-flash", "display": "Gemini 3.5 Flash", "custom": true, "status": "unverified" }
-      ]
-    },
-    {
-      "id": 1, "name": "Google (gildeshiro)", "engine": "google", "status": "unverified",
-      "reasoning": "profile.thinking_budget",
+      "id": 9,
+      "name": "Antigravity: redacted@example.com",
+      "engine_type": "google",
+      "type": "antigravity_login",
+      "status": "empty",
+      "model_count": 0,
       "models": []
     },
     {
-      "id": 2, "name": "Antigravity (jean)", "engine": "google", "status": "unverified",
-      "reasoning": "profile.thinking_budget",
-      "models": [ { "id": "gemini-3.5-flash", "display": "Gemini 3.5 Flash", "custom": true, "status": "unverified" } ]
+      "id": 5,
+      "name": "Google: work@example.com",
+      "engine_type": "google",
+      "type": "google_login",
+      "status": "ok",
+      "model_count": 9,
+      "models": [
+        {
+          "id": "gemini-3.1-pro-preview",
+          "display": "gemini-3.1-pro-preview",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          }
+        },
+        {
+          "id": "gemini-3.1-pro-preview-customtools",
+          "display": "gemini-3.1-pro-preview-customtools",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          }
+        },
+        {
+          "id": "gemini-3-pro-preview",
+          "display": "gemini-3-pro-preview",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          }
+        },
+        {
+          "id": "gemini-3-flash-preview",
+          "display": "gemini-3-flash-preview",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          }
+        },
+        {
+          "id": "gemini-2.5-pro",
+          "display": "gemini-2.5-pro",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 2.0 Pro with 2M context window"
+          }
+        },
+        {
+          "id": "gemini-2.5-flash",
+          "display": "gemini-2.5-flash",
+          "context": {
+            "input_tokens": 1000000,
+            "output_tokens": 8192,
+            "context_window": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window"
+          }
+        },
+        {
+          "id": "gemini-2.5-flash-lite",
+          "display": "gemini-2.5-flash-lite",
+          "context": {
+            "input_tokens": 1000000,
+            "output_tokens": 8192,
+            "context_window": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window"
+          }
+        },
+        {
+          "id": "gemini-2.0-flash",
+          "display": "gemini-2.0-flash",
+          "context": {
+            "input_tokens": 1000000,
+            "output_tokens": 8192,
+            "context_window": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window"
+          }
+        },
+        {
+          "id": "gemini-3.5-flash",
+          "display": "Gemini 3.5 Flash",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "ChatGPT Plus: pj@example.com",
+      "engine_type": "openai_responses",
+      "type": "open_ai_login",
+      "status": "ok",
+      "model_count": 4,
+      "models": [
+        {
+          "id": "gpt-5.5",
+          "display": "GPT-5.5",
+          "context": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "context_window": 272000,
+            "notes": null
+          }
+        },
+        {
+          "id": "gpt-5.4",
+          "display": "GPT-5.4",
+          "context": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "context_window": 272000,
+            "notes": null
+          }
+        },
+        {
+          "id": "gpt-5.4-mini",
+          "display": "GPT-5.4-Mini",
+          "context": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "context_window": 272000,
+            "notes": null
+          }
+        },
+        {
+          "id": "codex-auto-review",
+          "display": "Codex Auto Review",
+          "context": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "context_window": 272000,
+            "notes": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Claude Max: redacted@example.com",
+      "engine_type": "claude_code",
+      "type": "anthropic_login",
+      "status": "ok",
+      "model_count": 12,
+      "models": [
+        {
+          "id": "claude-fable-5",
+          "display": "Claude Fable 5",
+          "context": {
+            "input_tokens": 200000,
+            "output_tokens": 8000,
+            "context_window": 200000,
+            "notes": "Enterprise customers may access 1M+ token processing"
+          }
+        },
+        {
+          "id": "claude-opus-4-8",
+          "display": "Claude Opus 4.8",
+          "context": {
+            "input_tokens": 200000,
+            "output_tokens": 64000,
+            "context_window": 200000,
+            "notes": "Claude 4 series with extended output capabilities"
+          }
+        },
+        {
+          "id": "claude-opus-4-7",
+          "display": "Claude Opus 4.7",
+          "context": {
+            "input_tokens": 200000,
+            "output_tokens": 64000,
+            "context_window": 200000,
+            "notes": "Claude 4 series with extended output capabilities"
+          }
+        },
+        {
+          "id": "claude-sonnet-4-6",
+          "display": "Claude Sonnet 4.6",
+          "context": {
+            "input_tokens": 200000,
+            "output_tokens": 64000,
+            "context_window": 200000,
+            "notes": "Claude 4 series with extended output capabilities"
+          }
+        },
+        {
+          "id": "claude-opus-4-6",
+          "display": "Claude Opus 4.6",
+          "context": {
+            "input_tokens": 200000,
+            "output_tokens": 64000,
+            "context_window": 200000,
+            "notes": "Claude 4 series with extended output capabilities"
+          }
+        },
+        {
+          "id": "claude-opus-4-5-20251101",
+          "display": "Claude Opus 4.5",
+          "context": {
+            "input_tokens": 200000,
+            "output_tokens": 64000,
+            "context_window": 200000,
+            "notes": "Claude 4 series with extended output capabilities"
+          }
+        },
+        {
+          "id": "claude-haiku-4-5-20251001",
+          "display": "Claude Haiku 4.5",
+          "context": {
+            "input_tokens": 200000,
+            "output_tokens": 8000,
+            "context_window": 200000,
+            "notes": "Enterprise customers may access 1M+ token processing"
+          }
+        },
+        {
+          "id": "claude-sonnet-4-5-20250929",
+          "display": "Claude Sonnet 4.5",
+          "context": {
+            "input_tokens": 200000,
+            "output_tokens": 64000,
+            "context_window": 200000,
+            "notes": "Claude 4 series with extended output capabilities"
+          }
+        },
+        {
+          "id": "claude-opus-4-1-20250805",
+          "display": "Claude Opus 4.1",
+          "context": {
+            "input_tokens": 200000,
+            "output_tokens": 64000,
+            "context_window": 200000,
+            "notes": "Claude 4 series with extended output capabilities"
+          }
+        },
+        {
+          "id": "claude-opus-4-20250514",
+          "display": "Claude Opus 4",
+          "context": {
+            "input_tokens": 200000,
+            "output_tokens": 64000,
+            "context_window": 200000,
+            "notes": "Claude 4 series with extended output capabilities"
+          }
+        },
+        {
+          "id": "claude-sonnet-4-20250514",
+          "display": "Claude Sonnet 4",
+          "context": {
+            "input_tokens": 200000,
+            "output_tokens": 64000,
+            "context_window": 200000,
+            "notes": "Claude 4 series with extended output capabilities"
+          }
+        },
+        {
+          "id": "opus",
+          "display": "Claude Opus 4.8",
+          "context": {
+            "input_tokens": 200000,
+            "output_tokens": 8000,
+            "context_window": 200000,
+            "notes": "Enterprise customers may access 1M+ token processing"
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Antigravity: work@example.com",
+      "engine_type": "google",
+      "type": "antigravity_login",
+      "status": "ok",
+      "model_count": 7,
+      "models": [
+        {
+          "id": "gemini-3.1-pro-high",
+          "display": "gemini-3.1-pro-high",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          }
+        },
+        {
+          "id": "gemini-3.1-pro-low",
+          "display": "gemini-3.1-pro-low",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          }
+        },
+        {
+          "id": "gemini-3-flash",
+          "display": "gemini-3-flash",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          }
+        },
+        {
+          "id": "claude-opus-4-6-thinking",
+          "display": "claude-opus-4-6-thinking",
+          "context": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "context_window": null,
+            "notes": "Context limits not available"
+          }
+        },
+        {
+          "id": "claude-sonnet-4-6",
+          "display": "claude-sonnet-4-6",
+          "context": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "context_window": null,
+            "notes": "Context limits not available"
+          }
+        },
+        {
+          "id": "gpt-oss-120b-medium",
+          "display": "gpt-oss-120b-medium",
+          "context": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "context_window": null,
+            "notes": "Context limits not available"
+          }
+        },
+        {
+          "id": "gemini-3.5-flash",
+          "display": "Gemini 3.5 Flash",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          }
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "Google: redacted@example.com",
+      "engine_type": "google",
+      "type": "google_login",
+      "status": "ok",
+      "model_count": 8,
+      "models": [
+        {
+          "id": "gemini-3.1-pro-preview",
+          "display": "gemini-3.1-pro-preview",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          }
+        },
+        {
+          "id": "gemini-3.1-pro-preview-customtools",
+          "display": "gemini-3.1-pro-preview-customtools",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          }
+        },
+        {
+          "id": "gemini-3-pro-preview",
+          "display": "gemini-3-pro-preview",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          }
+        },
+        {
+          "id": "gemini-3-flash-preview",
+          "display": "gemini-3-flash-preview",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          }
+        },
+        {
+          "id": "gemini-2.5-pro",
+          "display": "gemini-2.5-pro",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 2.0 Pro with 2M context window"
+          }
+        },
+        {
+          "id": "gemini-2.5-flash",
+          "display": "gemini-2.5-flash",
+          "context": {
+            "input_tokens": 1000000,
+            "output_tokens": 8192,
+            "context_window": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window"
+          }
+        },
+        {
+          "id": "gemini-2.5-flash-lite",
+          "display": "gemini-2.5-flash-lite",
+          "context": {
+            "input_tokens": 1000000,
+            "output_tokens": 8192,
+            "context_window": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window"
+          }
+        },
+        {
+          "id": "gemini-2.0-flash",
+          "display": "gemini-2.0-flash",
+          "context": {
+            "input_tokens": 1000000,
+            "output_tokens": 8192,
+            "context_window": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window"
+          }
+        }
+      ]
     }
   ],
-
   "profiles": [
-    { "id": 1, "name": "Default", "config_id": 135, "anthropic_effort": "max", "openai_reasoning_effort": "xhigh", "note": "system prompt completo" },
-    { "id": 4, "name": "test",    "config_id": 36,  "anthropic_effort": "max", "openai_reasoning_effort": "high",  "google_thinking_budget": -1 }
-  ],
-
-  "todo_probe": "Sessão dedicada: rodar 1 worker por (provider × modelo × effort) capturando status/erro/quirk no app.db, p/ completar este catálogo e reportar ao dev team do Piebald."
+    {
+      "id": 1,
+      "name": "Default",
+      "config_id": 135,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": 0
+    },
+    {
+      "id": 2,
+      "name": "Title & Tag Generation",
+      "config_id": 2,
+      "anthropic_effort": null,
+      "thinking_mode": null,
+      "openai_reasoning_effort": null,
+      "google_thinking_budget": 0
+    },
+    {
+      "id": 3,
+      "name": "Context Compaction",
+      "config_id": 3,
+      "anthropic_effort": null,
+      "thinking_mode": null,
+      "openai_reasoning_effort": null,
+      "google_thinking_budget": 0
+    },
+    {
+      "id": 4,
+      "name": "test",
+      "config_id": 36,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "high",
+      "google_thinking_budget": -1
+    }
+  ]
 }

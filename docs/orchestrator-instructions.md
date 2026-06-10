@@ -14,15 +14,21 @@ sonnet implementam a sessão B"*).
 
 ## Como executar (4 passos)
 
-1. **Resolva os nomes** lendo `control-plane/catalog.json`. Mapeie a frase →
-   `{provider_id, model, profile_id}`:
-   - "claude/opus/sonnet/haiku" → provider **3** (✅ verificado) + o `model` do catálogo.
-   - "gpt-5.5/5.4/codex" → provider **4** (⚠️ quebrado hoje: service_tier/store — avise o usuário).
-   - "gemini" → provider **5** (❓ não verificado — avise).
-   - **reasoning** ("high/xhigh/low/max") → escolha o `profile_id` cujo effort casa.
-     Hoje só existem: **Default (id 1)** = anthropic max / openai xhigh; **test
-     (id 4)** = anthropic max / openai high. Se o effort pedido não tem profile,
-     use o mais próximo e **avise** (criar profile sob demanda = item futuro).
+1. **Resolva os nomes** lendo `control-plane/catalog.json` (fonte de verdade dos
+   model-ids; regenere com `node control-plane/discover-models.mjs`). Mapeie a
+   frase → `{provider_id, model, profile_id}`:
+   - "claude/opus/sonnet/haiku" → provider **3** (Claude Max, ✅ roda) + o `model` do catálogo.
+   - "gpt-5.5/5.4/codex" → provider **4** (ChatGPT Plus). Lista modelos; chat-time pode
+     ter quirk (`service_tier`/`store`) — avise se ainda não validado pelo probe.
+   - "gemini" → provider **5/1** (Google) ou **2** (Antigravity, agrega Claude/Gemini/gpt-oss).
+     Use os model-ids REAIS do catálogo (ex.: `gemini-3-pro-preview`, não `gemini-3.5-flash`).
+   - **Confiabilidade**: catálogo `status:"ok"` = o provider LISTA o modelo; se um worker
+     realmente roda é o que `control-plane/probe.mjs` valida. Na dúvida, prefira Claude
+     (provider 3, o único com chat-time já provado) ou avise o usuário do risco.
+   - **reasoning** ("high/xhigh/low/max") → escolha o `profile_id` cujo effort casa
+     (reasoning é SEMPRE via profile, todos os engines). Hoje: **Default (id 1)** =
+     anthropic max / openai xhigh; **test (id 4)** = anthropic max / openai high. Se o
+     effort pedido não tem profile, use o mais próximo e **avise**.
 
 2. **Monte os specs.** Cada worker:
    ```json

@@ -46,7 +46,7 @@ export class PiebaldWS {
     this._listeners = new Map();    // eventType -> Set<cb>
   }
 
-  connect({ timeoutMs = 8000 } = {}) {
+  connect({ timeoutMs = 8000, waitReadyMs = 12000 } = {}) {
     return new Promise((resolve, reject) => {
       const to = setTimeout(() => reject(new Error("connect timeout (sem web_access_granted)")), timeoutMs);
       this.ws = new WebSocket(this.url);
@@ -56,7 +56,22 @@ export class PiebaldWS {
         for (const [, p] of this._pending) { clearTimeout(p.timer); p.reject(new Error("WS fechou")); }
         this._pending.clear();
       });
-      this._onGranted = () => { clearTimeout(to); resolve(this); };
+      // Gate de readiness: o piebald-web tem warm-up async — logo após o granted,
+      // comandos podem falhar com "No subscription information available" até a
+      // assinatura carregar. Esperamos ela ficar pronta antes de resolver.
+      this._onGranted = async () => {
+        clearTimeout(to);
+        const t0 = Date.now();
+        for (;;) {
+          try { await this.call("get_subscription", {}, { timeoutMs: 4000 }); return resolve(this); }
+          catch (e) {
+            if (/subscription information/i.test(e.message) && Date.now() - t0 < waitReadyMs) {
+              await new Promise((r) => setTimeout(r, 500)); continue;
+            }
+            return resolve(this); // outro erro: segue (nao bloqueia comandos independentes de subscription)
+          }
+        }
+      };
       this._onRejected = () => { clearTimeout(to); reject(new Error("AUTH REJEITADO: token inválido/expirado (rotacionou?). Reobtenha da Web UI.")); };
     });
   }
@@ -164,15 +179,20 @@ export function lastAssistantStatus(chatId) {
   return sql(`SELECT status FROM messages WHERE parent_chat_id=${Number(chatId)} AND role='assistant' ORDER BY id DESC LIMIT 1;`);
 }
 
-// poll até working_status=idle (resultado pronto) com timeout
+// poll até o worker concluir. Estados ATIVOS = working/waiting_tool_call;
+// concluído = sair de ativo + existir assistant com status terminal.
 export async function readResult(chatId, { timeoutMs = 180000, pollMs = 2500 } = {}) {
+  const ACTIVE = new Set(["working", "waiting_tool_call"]);
   const t0 = Date.now();
   for (;;) {
-    const st = chatStatus(chatId);
-    if (st === "idle") {
-      return { status: lastAssistantStatus(chatId), text: lastAssistantText(chatId), ms: Date.now() - t0 };
+    const ws = chatStatus(chatId);
+    const ast = lastAssistantStatus(chatId); // '' se ainda não há assistant
+    const settled = !ACTIVE.has(ws) && ast && ast !== "streaming" && ast !== "generating" && ast !== "pending";
+    if (settled) {
+      const isErr = ws === "abandoned" || ast === "error";
+      return { status: isErr ? "error" : ast, working_status: ws, text: lastAssistantText(chatId), ms: Date.now() - t0 };
     }
-    if (Date.now() - t0 > timeoutMs) throw new Error(`readResult timeout (${timeoutMs}ms), working_status=${st}`);
+    if (Date.now() - t0 > timeoutMs) throw new Error(`readResult timeout (${timeoutMs}ms), working_status=${ws}, assistant=${ast || "—"}`);
     await new Promise((r) => setTimeout(r, pollMs));
   }
 }
@@ -190,7 +210,8 @@ if (isMain) {
     const pb = new PiebaldWS(token);
     await pb.connect();
     try {
-      if (cmd === "providers") console.log(JSON.stringify(await pb.listProviders(), null, 2));
+      if (cmd === "call") { const req = process.argv[4] ? JSON.parse(process.argv[4]) : {}; console.log(JSON.stringify(await pb.call(arg, req), null, 2)); }
+      else if (cmd === "providers") console.log(JSON.stringify(await pb.listProviders(), null, 2));
       else if (cmd === "profiles") console.log(JSON.stringify(await pb.listProfiles(), null, 2));
       else if (cmd === "smoke") {
         const id = await pb.createChat({ provider_id: 3, model: "claude-sonnet-4-6", current_directory: process.cwd(), title: "pbsub/smoke" });

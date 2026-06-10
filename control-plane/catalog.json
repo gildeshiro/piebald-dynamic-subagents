@@ -1,0 +1,73 @@
+{
+  "_meta": {
+    "generated": "2026-06-10",
+    "source": "app.db model_listing + provider_custom_models + validação ao vivo",
+    "note": "Status: verified=deu 200 e worker rodou; broken=erra hoje no setup; unverified=não testado. Reasoning é SEMPRE herdado do profile (override por engine no generation_config). Para reasoning arbitrário por worker, pré-criar profiles por effort (ver AGENTS.md).",
+    "reasoning_by_engine": {
+      "claude_code": "profile.effort (anthropic). Valores vistos: 'max'. A confirmar no probe: low/medium/high/max.",
+      "openai_responses": "profile.reasoning_effort. Níveis expostos pelo modelo: low|medium|high|xhigh (default medium). + reasoning_summary, text_verbosity.",
+      "google": "profile.thinking_budget (inteiro; -1 = dinâmico)."
+    }
+  },
+
+  "defaults": { "provider_id": 3, "model": "claude-sonnet-4-6", "profile_id": 1 },
+
+  "providers": [
+    {
+      "id": 3, "name": "Claude Max", "engine": "claude_code", "status": "verified",
+      "reasoning": "profile.effort",
+      "models": [
+        { "id": "claude-opus-4-8", "display": "Claude Opus 4.8", "alias": "opus", "tier": "frontier" },
+        { "id": "claude-opus-4-7", "display": "Claude Opus 4.7" },
+        { "id": "claude-sonnet-4-6", "display": "Claude Sonnet 4.6", "tier": "balanced", "verified": true },
+        { "id": "claude-haiku-4-5-20251001", "display": "Claude Haiku 4.5", "tier": "fast" },
+        { "id": "claude-fable-5", "display": "Claude Fable 5" },
+        { "id": "claude-opus-4-6", "display": "Claude Opus 4.6" },
+        { "id": "claude-opus-4-5-20251101", "display": "Claude Opus 4.5" },
+        { "id": "claude-sonnet-4-5-20250929", "display": "Claude Sonnet 4.5" },
+        { "id": "claude-opus-4-1-20250805", "display": "Claude Opus 4.1" },
+        { "id": "claude-opus-4-20250514", "display": "Claude Opus 4" },
+        { "id": "claude-sonnet-4-20250514", "display": "Claude Sonnet 4" }
+      ]
+    },
+    {
+      "id": 4, "name": "ChatGPT Plus", "engine": "openai_responses", "status": "broken",
+      "reasoning": "profile.reasoning_effort (low|medium|high|xhigh)",
+      "quirks": [
+        "service_tier=flex -> 400 'Unsupported service_tier: flex' no codex. Profile precisa service_tier compatível (ou nulo).",
+        "store=true -> 400 'Store must be set to false'. Profile precisa store=false."
+      ],
+      "models": [
+        { "id": "gpt-5.5", "display": "GPT-5.5", "reasoning_levels": ["low","medium","high","xhigh"], "default_reasoning": "medium", "context": 272000 },
+        { "id": "gpt-5.4", "display": "GPT-5.4", "reasoning_levels": ["low","medium","high","xhigh"], "default_reasoning": "medium" },
+        { "id": "gpt-5.4-mini", "display": "GPT-5.4 mini", "reasoning_levels": ["low","medium","high","xhigh"], "default_reasoning": "medium", "tier": "fast" },
+        { "id": "codex-auto-review", "display": "Codex Auto Review", "reasoning_levels": ["low","medium","high","xhigh"], "internal": true }
+      ]
+    },
+    {
+      "id": 5, "name": "Google (jean)", "engine": "google", "status": "unverified",
+      "reasoning": "profile.thinking_budget",
+      "quirks": ["gemini-3.5-flash deu HTTP 404 no endpoint cloudcode-pa — model-id pode estar incorreto p/ esta conta/engine. Confirmar no probe."],
+      "models": [
+        { "id": "gemini-3.5-flash", "display": "Gemini 3.5 Flash", "custom": true, "status": "unverified" }
+      ]
+    },
+    {
+      "id": 1, "name": "Google (gildeshiro)", "engine": "google", "status": "unverified",
+      "reasoning": "profile.thinking_budget",
+      "models": []
+    },
+    {
+      "id": 2, "name": "Antigravity (jean)", "engine": "google", "status": "unverified",
+      "reasoning": "profile.thinking_budget",
+      "models": [ { "id": "gemini-3.5-flash", "display": "Gemini 3.5 Flash", "custom": true, "status": "unverified" } ]
+    }
+  ],
+
+  "profiles": [
+    { "id": 1, "name": "Default", "config_id": 135, "anthropic_effort": "max", "openai_reasoning_effort": "xhigh", "note": "system prompt completo" },
+    { "id": 4, "name": "test",    "config_id": 36,  "anthropic_effort": "max", "openai_reasoning_effort": "high",  "google_thinking_budget": -1 }
+  ],
+
+  "todo_probe": "Sessão dedicada: rodar 1 worker por (provider × modelo × effort) capturando status/erro/quirk no app.db, p/ completar este catálogo e reportar ao dev team do Piebald."
+}

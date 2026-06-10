@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated": "2026-06-10T23:21:00.300Z",
+    "generated": "2026-06-10T23:25:13.315Z",
     "source": "refresh_provider_models (ao vivo)",
     "regenerate": "node control-plane/discover-models.mjs",
     "reasoning_note": "No esquema Piebald, reasoning de TODOS os engines é controlado pelo PROFILE (o generation_config do profile guarda anthropic.effort + openai.reasoning_effort + google.thinking_budget juntos). Selecionar profile = selecionar reasoning. É o único lever de reasoning no nosso setup.",
@@ -29,7 +29,7 @@
       "engine_type": "google",
       "type": "google_login",
       "status": "ok",
-      "model_count": 9,
+      "model_count": 8,
       "models": [
         {
           "id": "gemini-3.1-pro-preview",
@@ -110,16 +110,6 @@
             "context_window": 1000000,
             "notes": "Gemini 2.0 Flash with 1M context window"
           }
-        },
-        {
-          "id": "gemini-3.5-flash",
-          "display": "Gemini 3.5 Flash",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          }
         }
       ]
     },
@@ -179,7 +169,7 @@
       "engine_type": "claude_code",
       "type": "anthropic_login",
       "status": "ok",
-      "model_count": 12,
+      "model_count": 11,
       "models": [
         {
           "id": "claude-fable-5",
@@ -290,16 +280,6 @@
             "context_window": 200000,
             "notes": "Claude 4 series with extended output capabilities"
           }
-        },
-        {
-          "id": "opus",
-          "display": "Claude Opus 4.8",
-          "context": {
-            "input_tokens": 200000,
-            "output_tokens": 8000,
-            "context_window": 200000,
-            "notes": "Enterprise customers may access 1M+ token processing"
-          }
         }
       ]
     },
@@ -309,7 +289,7 @@
       "engine_type": "google",
       "type": "antigravity_login",
       "status": "ok",
-      "model_count": 7,
+      "model_count": 6,
       "models": [
         {
           "id": "gemini-3.1-pro-high",
@@ -369,16 +349,6 @@
             "output_tokens": null,
             "context_window": null,
             "notes": "Context limits not available"
-          }
-        },
-        {
-          "id": "gemini-3.5-flash",
-          "display": "Gemini 3.5 Flash",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
           }
         }
       ]

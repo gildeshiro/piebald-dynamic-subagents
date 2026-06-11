@@ -1,5 +1,6 @@
 # === Segredos — NUNCA commitar ===
 *.token
+.pbtoken
 *token*.txt
 .env
 .env.*

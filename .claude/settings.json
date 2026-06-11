@@ -1,0 +1,12 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": "C:\\Projects\\piebald-dynamic-subagents\\hooks\\pretooluse-route.cmd" }
+        ]
+      }
+    ]
+  }
+}

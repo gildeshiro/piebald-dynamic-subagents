@@ -183,13 +183,17 @@ export function lastAssistantStatus(chatId) {
 // concluído = sair de ativo + existir assistant com status terminal.
 export async function readResult(chatId, { timeoutMs = 180000, pollMs = 2500 } = {}) {
   const ACTIVE = new Set(["working", "waiting_tool_call"]);
+  const FAIL = new Set(["error", "abandoned"]); // estados terminais de FALHA
   const t0 = Date.now();
   for (;;) {
     const ws = chatStatus(chatId);
+    if (FAIL.has(ws)) { // falha imediata (não espera 60s por assistant que não vem)
+      return { status: "error", working_status: ws, text: lastAssistantText(chatId), ms: Date.now() - t0 };
+    }
     const ast = lastAssistantStatus(chatId); // '' se ainda não há assistant
     const settled = !ACTIVE.has(ws) && ast && ast !== "streaming" && ast !== "generating" && ast !== "pending";
     if (settled) {
-      const isErr = ws === "abandoned" || ast === "error";
+      const isErr = ast === "error";
       return { status: isErr ? "error" : ast, working_status: ws, text: lastAssistantText(chatId), ms: Date.now() - t0 };
     }
     if (Date.now() - t0 > timeoutMs) throw new Error(`readResult timeout (${timeoutMs}ms), working_status=${ws}, assistant=${ast || "—"}`);

@@ -39,7 +39,7 @@ console.error(`Probe: ${specs.length} combos (provider×modelo), concorrência $
 const pb = new PiebaldWS(getToken());
 await pb.connect();
 try {
-  const results = await runMany(pb, specs, { maxConcurrency, resultTimeoutMs: 120000 });
+  const results = await runMany(pb, specs, { maxConcurrency, resultTimeoutMs: 60000 });
   const rows = results.map((r, i) => ({
     provider: specs[i]._provider, model: specs[i].model,
     hint: specs[i]._status_hint,

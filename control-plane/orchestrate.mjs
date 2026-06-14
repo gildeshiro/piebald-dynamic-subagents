@@ -36,10 +36,10 @@ export async function runOne(pb, spec, { resultTimeoutMs = 180000 } = {}) {
       title,
     });
     await pb.sendMessage(chatId, spec.task);
-    const r = await readResult(chatId, { timeoutMs: resultTimeoutMs });
-    const ok = r.status !== "error";
+    const r = await readResult(chatId, { timeoutMs: resultTimeoutMs, stuckToolMs: spec.stuckToolMs });
+    const ok = r.status === "completed"; // só 'completed' com texto é sucesso real
     if (!spec.keep && ok) await pb.deleteChat(chatId).catch(() => {});
-    return { ok, chatId, title, model: spec.model, provider_id: spec.provider_id, status: r.status, text: r.text, ms: Date.now() - t0 };
+    return { ok, chatId, title, model: spec.model, provider_id: spec.provider_id, status: r.status, text: r.text, pendingTools: r.pendingTools, ms: Date.now() - t0 };
   } catch (e) {
     return { ok: false, chatId, title, model: spec.model, provider_id: spec.provider_id, error: e.message, ms: Date.now() - t0 };
   }

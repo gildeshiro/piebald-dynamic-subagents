@@ -28,6 +28,13 @@ async function main() {
   // DIAGNÓSTICO: registra todo disparo (descobre tool_name e shape do input do subagente)
   log(`fired tool=${tool} input_keys=${Array.isArray(input) ? "array" : Object.keys(input).join(",")}`);
 
+  // GATE: só roteia se for o tool de subagente NATIVO. Sem isto o hook é greedy —
+  // roteava pra QUALQUER tool cujo input serializado contivesse a tag (ex.: uma
+  // chamada de browser/Bash que mencione [[pbroute]]). Descoberto 2026-06-14:
+  // neste runtime o tool nativo se chama `Agent` (também aceitamos LaunchSubagent).
+  const NATIVE_SUBAGENT_TOOLS = new Set(["Agent", "LaunchSubagent", "Task"]);
+  if (!NATIVE_SUBAGENT_TOOLS.has(tool)) return;
+
   const promptText = input.prompt || input.description || input.task || input.instructions ||
     (typeof input === "string" ? input : JSON.stringify(input));
   const m = String(promptText).match(/\[\[pbroute([^\]]*)\]\]/i);

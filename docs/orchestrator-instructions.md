@@ -17,14 +17,19 @@ sonnet implementam a sessão B"*).
 1. **Resolva os nomes** lendo `control-plane/catalog.json` (fonte de verdade dos
    model-ids; regenere com `node control-plane/discover-models.mjs`). Mapeie a
    frase → `{provider_id, model, profile_id}`:
-   - "claude/opus/sonnet/haiku" → provider **3** (Claude Max, ✅ roda) + o `model` do catálogo.
+   - "claude/opus/sonnet/haiku" → provider **3** (Claude Max) + o `model` do catálogo.
+     ⚠️ **Claude via WS worker está com 401** (auth OAuth Anthropic VELHA em memória no
+     `piebald-web.exe`; o app principal tem auth fresca → 200). Pra Claude: ou **reinicie
+     o piebald-web** (refresca a auth do DB, rotaciona o token) ou rode o Claude como
+     **subagente NATIVO** (LaunchSubagent roda no app principal = auth fresca = ✅).
+     GPT (P4) e Gemini (P5/1) rodam normal via WS.
    - "gpt-5.5/5.4/codex" → provider **4** (ChatGPT Plus). Lista modelos; chat-time pode
      ter quirk (`service_tier`/`store`) — avise se ainda não validado pelo probe.
    - "gemini" → provider **5/1** (Google) ou **2** (Antigravity, agrega Claude/Gemini/gpt-oss).
      Use os model-ids REAIS do catálogo (ex.: `gemini-3-pro-preview`, não `gemini-3.5-flash`).
    - **Confiabilidade**: catálogo `status:"ok"` = o provider LISTA o modelo; se um worker
-     realmente roda é o que `control-plane/probe.mjs` valida. Na dúvida, prefira Claude
-     (provider 3, o único com chat-time já provado) ou avise o usuário do risco.
+     realmente roda é o que `control-plane/probe.mjs` valida. Chat-time provado via WS:
+     **GPT-5.5 (P4) ✅, Gemini (P5) ✅; Claude (P3) ❌ 401 via worker** (ver aviso acima).
    - **reasoning** ("high/xhigh/low/max") → escolha o `profile_id` cujo effort casa
      (reasoning é SEMPRE via profile, todos os engines). Hoje: **Default (id 1)** =
      anthropic max / openai xhigh; **test (id 4)** = anthropic max / openai high. Se o

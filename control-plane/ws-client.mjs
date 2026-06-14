@@ -179,22 +179,60 @@ export function lastAssistantStatus(chatId) {
   return sql(`SELECT status FROM messages WHERE parent_chat_id=${Number(chatId)} AND role='assistant' ORDER BY id DESC LIMIT 1;`);
 }
 
-// poll até o worker concluir. Estados ATIVOS = working/waiting_tool_call;
-// concluído = sair de ativo + existir assistant com status terminal.
-export async function readResult(chatId, { timeoutMs = 180000, pollMs = 2500 } = {}) {
-  const ACTIVE = new Set(["working", "waiting_tool_call"]);
-  const FAIL = new Set(["error", "abandoned"]); // estados terminais de FALHA
+// tool calls AINDA não resolvidas (pending/executing) e as DENIED do último
+// assistant — sinal de que o worker pausou esperando execução/aprovação.
+export function pendingToolCalls(chatId) {
+  const id = Number(chatId);
+  const out = sql(`SELECT mptc.tool_name || ':' || mptc.tool_state
+    FROM messages m
+    JOIN message_parts mp ON mp.parent_chat_message_id=m.id
+    JOIN message_part_tool_call mptc ON mptc.message_part_id=mp.id
+    WHERE m.id=(SELECT MAX(id) FROM messages WHERE parent_chat_id=${id} AND role='assistant')
+      AND mptc.tool_state IN ('pending','executing','denied')
+    ORDER BY mp.part_index;`);
+  return out ? out.split("\n").filter(Boolean) : [];
+}
+
+// Máquina de estados real do working_status (descoberta no app.db 2026-06-13):
+//   PROGRESS = working/backlog (avançando de verdade)
+//   DONE     = done/finished/idle (terminal; sucesso só se houver texto e sem erro)
+//   FAIL     = error/abandoned (terminal de falha)
+//   waiting_tool_call = PAUSADO esperando tool. Normalmente TRANSITÓRIO (a tool
+//     executa e segue), mas pode TRAVAR (tool pendente sem executor/aprovação —
+//     ex.: worker que auto-disparou brainstorming -> TodoWrite/retrieve_tools
+//     pendentes). Por isso: timeout SECUNDÁRIO (stuckToolMs) só pra esse estado.
+//   Retornos: completed | error | paused_tool_call | no_text (assistant terminou
+//     mas só produziu tool_call, zero texto -> NÃO é sucesso silencioso).
+const PROGRESS = new Set(["working", "backlog"]);
+const DONE = new Set(["done", "finished", "idle"]);
+const FAIL = new Set(["error", "abandoned"]);
+const STREAMING = new Set(["streaming", "generating", "pending", "queued"]);
+
+export async function readResult(chatId, { timeoutMs = 180000, pollMs = 2500, stuckToolMs = 30000 } = {}) {
   const t0 = Date.now();
+  let waitingSince = 0;
   for (;;) {
     const ws = chatStatus(chatId);
-    if (FAIL.has(ws)) { // falha imediata (não espera 60s por assistant que não vem)
-      return { status: "error", working_status: ws, text: lastAssistantText(chatId), ms: Date.now() - t0 };
+    if (FAIL.has(ws)) {
+      return { status: "error", working_status: ws, text: lastAssistantText(chatId), pendingTools: pendingToolCalls(chatId), ms: Date.now() - t0 };
+    }
+    if (ws === "waiting_tool_call") {
+      if (!waitingSince) waitingSince = Date.now();
+      if (Date.now() - waitingSince > stuckToolMs) { // preso em tool: pausa, não trava
+        return { status: "paused_tool_call", working_status: ws, text: lastAssistantText(chatId), pendingTools: pendingToolCalls(chatId), ms: Date.now() - t0 };
+      }
+    } else {
+      waitingSince = 0; // saiu do waiting -> resetar o relógio de "preso"
     }
     const ast = lastAssistantStatus(chatId); // '' se ainda não há assistant
-    const settled = !ACTIVE.has(ws) && ast && ast !== "streaming" && ast !== "generating" && ast !== "pending";
+    const settled = DONE.has(ws) && ast && !STREAMING.has(ast);
     if (settled) {
-      const isErr = ast === "error";
-      return { status: isErr ? "error" : ast, working_status: ws, text: lastAssistantText(chatId), ms: Date.now() - t0 };
+      if (ast === "error") return { status: "error", working_status: ws, text: lastAssistantText(chatId), pendingTools: pendingToolCalls(chatId), ms: Date.now() - t0 };
+      const text = lastAssistantText(chatId);
+      const tools = pendingToolCalls(chatId);
+      // assistant 'completed' mas só com tool_call e ZERO texto != sucesso real
+      const status = text ? "completed" : (tools.length ? "no_text" : "completed");
+      return { status, working_status: ws, text, pendingTools: tools, ms: Date.now() - t0 };
     }
     if (Date.now() - t0 > timeoutMs) throw new Error(`readResult timeout (${timeoutMs}ms), working_status=${ws}, assistant=${ast || "—"}`);
     await new Promise((r) => setTimeout(r, pollMs));

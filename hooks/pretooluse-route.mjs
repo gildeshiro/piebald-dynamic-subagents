@@ -22,6 +22,7 @@ const __dir = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(__dir, "..");
 const LOG = path.join(__dir, "route.log");
 const TOKEN_FILE = path.join(ROOT, ".pbtoken");
+const BASELINE_FILE = path.join(ROOT, "control-plane", "pbroute-baseline.json");
 const CURRENT_TOKEN = path.join(os.homedir(), ".piebald-remote", "current-token");
 const DB_PATH = process.env.PIEBALD_APP_DB ||
   path.join(process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming"), "Piebald", "app.db");
@@ -36,7 +37,16 @@ function writeDb(updates) {
   try {
     db.exec("PRAGMA busy_timeout=4000");
     const stmt = db.prepare("UPDATE settings SET value=? WHERE key=?");
-    for (const [k, v] of Object.entries(updates)) stmt.run(String(v), KEY[k]);
+    let totalChanges = 0;
+    const failedKeys = [];
+    const entries = Object.entries(updates);
+    for (const [k, v] of entries) {
+      const dbKey = KEY[k];
+      const result = stmt.run(String(v), dbKey);
+      totalChanges += result.changes;
+      if (result.changes === 0) failedKeys.push(dbKey);
+    }
+    if (totalChanges < entries.length) throw new Error(`route key(s) matched 0 rows: ${failedKeys.join(", ")}`);
   } finally { db.close(); }
 }
 
@@ -73,6 +83,24 @@ async function wsFallback(updates) {
   throw new Error("nenhum token WS vivo");
 }
 
+async function resetBaseline(tool, reason) {
+  let baseline;
+  try { baseline = JSON.parse(readFileSync(BASELINE_FILE, "utf8")); }
+  catch { log("no baseline file, skip reset"); return; }
+  const updates = {};
+  for (const k of ["provider", "model", "profile"]) if (baseline[k] !== undefined) updates[k] = baseline[k];
+  if (!Object.keys(updates).length) { log("baseline sem campos válidos -> nada"); return; }
+  log(`${reason} -> reset baseline ${JSON.stringify(updates)} tool=${tool}`);
+  try {
+    writeDb(updates);
+    log(`RESET OK (db) -> ${JSON.stringify(updates)}`);
+  } catch (e) {
+    log(`DB reset falhou (${e.message}) -> WS fallback`);
+    try { await wsFallback(updates); log(`RESET OK (ws) -> ${JSON.stringify(updates)}`); }
+    catch (e2) { log(`RESET ERRO (db+ws): ${e2.message}`); }
+  }
+}
+
 async function main() {
   let raw = ""; try { raw = readFileSync(0, "utf8"); } catch {}
   let ev = {}; try { ev = JSON.parse(raw); } catch {}
@@ -87,13 +115,13 @@ async function main() {
   const promptText = input.prompt || input.description || input.task || input.instructions ||
     (typeof input === "string" ? input : JSON.stringify(input));
   const m = String(promptText).match(/\[\[pbroute([^\]]*)\]\]/i);
-  if (!m) return; // sem tag -> subagente herda o global atual, não mexe em nada
+  if (!m) { await resetBaseline(tool, "pbroute absent"); return; }
 
   const args = m[1];
   const get = (k) => { const r = args.match(new RegExp(k + "\\s*=\\s*([^\\s\\]]+)")); return r ? r[1] : undefined; };
   const updates = {};
   for (const k of ["provider", "model", "profile"]) { const v = get(k); if (v !== undefined) updates[k] = v; }
-  if (!Object.keys(updates).length) { log("pbroute sem campos válidos -> nada"); return; }
+  if (!Object.keys(updates).length) { await resetBaseline(tool, "pbroute sem campos válidos"); return; }
   log(`pbroute DETECTED ${JSON.stringify(updates)} tool=${tool}`);
 
   try {

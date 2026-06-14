@@ -1,14 +1,14 @@
 -- queries.sql — Referência de queries para Piebald app.db
--- Arquivo: %USERPROFILE%/AppData/Roaming/Piebald/app.db
+-- Arquivo: C:/Users/<you>/AppData/Roaming/Piebald/app.db
 --
 -- SEMPRE abrir como: file:<path>?mode=ro
 -- NUNCA usar immutable=1 para dados ao vivo (quota, requests recentes)
 -- immutable=1 é OK para settings/providers (tabelas estáticas de config)
 --
 -- Executar via sqlite3:
---   sqlite3 "file:%USERPROFILE%/AppData/Roaming/Piebald/app.db?mode=ro" < queries.sql
+--   sqlite3 "file:C:/Users/<you>/AppData/Roaming/Piebald/app.db?mode=ro" < queries.sql
 -- Ou em Python:
---   conn = sqlite3.connect("file:%USERPROFILE%/AppData/Roaming/Piebald/app.db?mode=ro", uri=True)
+--   conn = sqlite3.connect("file:C:/Users/<you>/AppData/Roaming/Piebald/app.db?mode=ro", uri=True)
 
 
 -- ═══════════════════════════════════════════════════════════════════════════

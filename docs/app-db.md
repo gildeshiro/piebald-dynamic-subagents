@@ -1,6 +1,6 @@
 # app.db — Schema Completo
 
-**Arquivo:** `%USERPROFILE%/AppData/Roaming/Piebald/app.db`
+**Arquivo:** `C:/Users/<you>/AppData/Roaming/Piebald/app.db`
 **Tamanho observado:** ~3.68 GB (2026-06-02)
 **Formato:** SQLite com WAL (Write-Ahead Logging)
 **Janela de retenção:** ~48 horas (rotação automática)

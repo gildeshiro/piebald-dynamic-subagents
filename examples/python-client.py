@@ -31,7 +31,7 @@ from typing import Optional
 # Constantes
 # ─────────────────────────────────────────────────────────────────────────────
 
-DEFAULT_DB   = "%USERPROFILE%/AppData/Roaming/Piebald/app.db"
+DEFAULT_DB   = "C:/Users/<you>/AppData/Roaming/Piebald/app.db"
 DEFAULT_PORT = 7000
 
 # ─────────────────────────────────────────────────────────────────────────────

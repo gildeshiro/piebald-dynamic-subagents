@@ -22,7 +22,7 @@ ORDER BY r.created_at DESC
 LIMIT 1;
 ```
 
-Abrir com: `file:%USERPROFILE%/AppData/Roaming/Piebald/app.db?mode=ro`
+Abrir com: `file:C:/Users/<you>/AppData/Roaming/Piebald/app.db?mode=ro`
 
 ⚠️ **NÃO adicionar `immutable=1`** — o banco está em modo WAL ativo.
 `immutable=1` ignora o WAL e devolve valores stale (da última checkpoint, não do presente).

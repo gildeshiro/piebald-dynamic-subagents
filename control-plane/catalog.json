@@ -16,7 +16,7 @@
   "providers": [
     {
       "id": 9,
-      "name": "Antigravity: redacted@example.com",
+      "name": "Antigravity: personal@example.com",
       "engine_type": "google",
       "type": "antigravity_login",
       "status": "empty",
@@ -165,7 +165,7 @@
     },
     {
       "id": 3,
-      "name": "Claude Max: redacted@example.com",
+      "name": "Claude Max: personal@example.com",
       "engine_type": "claude_code",
       "type": "anthropic_login",
       "status": "ok",
@@ -355,7 +355,7 @@
     },
     {
       "id": 1,
-      "name": "Google: redacted@example.com",
+      "name": "Google: personal@example.com",
       "engine_type": "google",
       "type": "google_login",
       "status": "ok",

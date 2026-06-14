@@ -12,6 +12,9 @@ certs/
 *.p12
 auth.json
 
+# === Backup row-level do system prompt do Default (contém o bloco de instruções) ===
+.pbroute-default-systemprompt.bak
+
 # === Cópias / dumps do app.db (podem conter prompts, chaves, PII) ===
 *.db
 *.db-shm

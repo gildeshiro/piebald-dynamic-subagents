@@ -1,0 +1,14 @@
+
+
+## Heterogeneous native subagents (win-work)
+You can give a native subagent a DIFFERENT brain than yours. Prefix the subagent's
+prompt with a route tag; a local PreToolUse hook writes the choice into Piebald's
+app.db just before the subagent is created (no token, no extra process needed):
+  [[pbroute provider=<id> model=<model-id> profile=<id>]]   (any subset; only present fields apply)
+- Providers here (ids may change): 3=Claude Max, 4=ChatGPT Plus, 5/1=Google, 2=Antigravity.
+  Valid model-ids per provider live in C:\Projects\piebald-dynamic-subagents\control-plane\catalog.json
+- If subagents need DIFFERENT brains, launch them SEQUENTIALLY (the route is a shared global
+  flipped per launch; parallel launches race). Same-brain parallel is fine.
+- reasoning/effort is profile-bound -> use profile=<id> (omit = Default).
+- No tag = the subagent inherits the current default (Claude). Use a tag ONLY when a subagent
+  genuinely needs another brain; don't spawn subagents just because you can.

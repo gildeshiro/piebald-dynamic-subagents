@@ -1,108 +1,108 @@
 # piebald-dynamic-subagents
 
-Subagentes **heterogêneos** para o **Piebald**: dar a cada subagente nativo um
-**cérebro diferente** (provider + modelo) e um **profile próprio** (reasoning +
-system prompt) no momento do disparo — algo que o Claude Code faz via frontmatter
-`model:` do subagente, mas que o Piebald não expõe.
+**Heterogeneous** native subagents for **Piebald**: give each native subagent a
+**different brain** (provider + model) and its **own profile** (reasoning +
+system prompt) at launch time — something Claude Code does via the subagent's
+`model:` frontmatter field, but which Piebald does not expose natively.
 
-O Piebald roteia **todos** os subagentes para o mesmo provider/modelo/profile default.
-Não há campo "este subagente usa Opus, aquele usa Gemini, o outro usa Haiku". Este
-projeto adiciona esse roteamento por subagente sem fork do Piebald: um **hook
-`PreToolUse`** lê uma diretiva `[[pbroute …]]` no prompt do subagente e grava a rota
-no `app.db` **just-in-time**, antes do subagente nascer.
+Piebald routes **all** subagents to the same default provider/model/profile.
+There is no "this subagent uses Opus, that one uses Gemini, the other uses Haiku"
+field. This project adds per-subagent routing without forking Piebald: a **`PreToolUse`
+hook** reads a routing directive from the subagent's prompt and writes the route into
+`app.db` **just-in-time**, before the subagent is created.
 
-> Replica o `model:`/persona-por-subagente do Claude Code dentro das limitações do
-> Piebald (que não tem API pública de roteamento por subagente). A rota é um estado
-> global flipado por launch — daí as regras de ordem abaixo.
+> Replicates the `model:`/per-subagent-persona feature of Claude Code within the
+> constraints of Piebald (which has no public per-subagent routing API). The route
+> is a global state flipped per launch — hence the ordering rules below.
 
 ---
 
-## A diretiva
+## The directive
 
-No prompt do subagente, um prefixo opcional escolhe o cérebro e o profile:
+In the subagent's prompt, an optional prefix selects the brain and profile:
 
 ```
 [[pbroute provider=<id> model=<model-id> profile=<id>]]
 ```
 
-Qualquer subconjunto dos três campos vale; só os presentes são aplicados. Sem tag,
-o subagente herda o default atual (Claude). Exemplos:
+Any subset of the three fields is valid; only the present ones are applied. Without
+the tag, the subagent inherits the current default (Claude). Examples:
 
 ```
-[[pbroute provider=5 model=gemini-3-pro-preview]]            Pesquisa esta API e resuma…
-[[pbroute provider=3 model=claude-opus-4-8 profile=4]]        Faça a auditoria de segurança…
-[[pbroute provider=4 model=gpt-5.5]]                          Critique este plano…
+[[pbroute provider=5 model=gemini-3-pro-preview]]            Research this API and summarize…
+[[pbroute provider=3 model=claude-opus-4-8 profile=4]]        Perform the security audit…
+[[pbroute provider=4 model=gpt-5.5]]                          Critique this plan…
 ```
 
-`provider`/`model` válidos vivem em `control-plane/catalog.json` (gerado ao vivo).
-`profile` aponta para um Profile do Piebald (provider/model default + **reasoning
-effort** + system prompt) — é o que carrega a persona + o nível de raciocínio.
+Valid `provider`/`model` values live in `control-plane/catalog.json` (generated live).
+`profile` points to a Piebald Profile (default provider/model + **reasoning
+effort** + system prompt) — it carries the persona + reasoning level.
 
 ---
 
-## As peças
+## Components
 
-| Peça | O quê | Cobre | Arquivo |
+| Component | What it does | Covers | File |
 | --- | --- | --- | --- |
-| **Hook** | `PreToolUse` que detecta `[[pbroute]]` e faz JIT-write da rota no `app.db` antes da criação do subagente | "aplicar a rota" | `hooks/pretooluse-route.mjs` · `.cmd` |
-| **Guard** | Anti-mis-route: baseline + changes-guard (não vaza rota de um launch pro próximo) | "não roteia errado em silêncio" | `hooks/pretooluse-route.mjs` (A1/A2) · `control-plane/pbroute-baseline.json` |
-| **Catálogo** | Descoberta ao vivo de providers/modelos/profiles | "o que dá pra rotear" | `control-plane/catalog.json` · `discover-models.mjs` |
-| **Profiles** | Criar/editar/remover Profiles via API legítima do Piebald | "personas + reasoning" | `control-plane/profiles.mjs` |
-| **Probe** | Valida que um modelo de fato roda como worker (status `ok` ≠ roda) | "rota não-fantasma" | `control-plane/probe.mjs` |
-| **WS client** | Cliente WebSocket do web-mode (`readResult v3`) usado pelo control-plane | "falar com o engine" | `control-plane/ws-client.mjs` · `ws-cli.mjs` |
+| **Hook** | `PreToolUse` hook that detects the routing directive and JIT-writes the route into `app.db` before the subagent is created | "apply the route" | `hooks/pretooluse-route.mjs` · `.cmd` |
+| **Guard** | Anti-misroute: baseline + changes-guard (prevents a route from leaking across launches) | "no silent misrouting" | `hooks/pretooluse-route.mjs` (A1/A2) · `control-plane/pbroute-baseline.json` |
+| **Catalog** | Live discovery of providers/models/profiles | "what can be routed" | `control-plane/catalog.json` · `discover-models.mjs` |
+| **Profiles** | Create/edit/remove Profiles via Piebald's legitimate API | "personas + reasoning" | `control-plane/profiles.mjs` |
+| **Probe** | Validates that a model actually runs as a worker (`status ok` ≠ actually runs) | "no ghost routes" | `control-plane/probe.mjs` |
+| **WS client** | WebSocket client for web-mode (`readResult v3`) used by the control-plane | "talk to the engine" | `control-plane/ws-client.mjs` · `ws-cli.mjs` |
 
 ---
 
-## Regra de ouro: heterogêneo em paralelo dá race
+## Golden rule: heterogeneous in parallel causes a race
 
-A rota é um **estado global** que o hook flipa por launch. Logo:
+The route is a **global state** that the hook flips per launch. Therefore:
 
-- Subagentes que precisam de cérebros **diferentes** → lançar **sequencialmente**
-  (um por vez; a rota de um não pode vazar pro outro).
-- Subagentes com o **mesmo** cérebro em paralelo → ok.
-- Sem tag → herda o default; use a tag só quando o subagente **realmente** precisa
-  de outro cérebro.
+- Subagents that need **different** brains → launch **sequentially**
+  (one at a time; one route must not leak into another).
+- Subagents with the **same** brain in parallel → fine.
+- No tag → inherits the default; use the tag only when the subagent **truly** needs
+  a different brain.
 
-Validação: provado e2e nos 5 providers; 37 modelos probados (`docs/native-hook-e2e.md`,
+Validation: proven end-to-end across all 5 providers; 37 models probed (`docs/native-hook-e2e.md`,
 `docs/smoke-results.md`).
 
 ---
 
-## Instalação
+## Installation
 
-O hook é fiado no `.claude/settings.json` (PreToolUse). Ver `docs/global-deploy.md`
-para a fiação global no host e `docs/pbroute-directive.txt` para o texto da diretiva
-que vai no system prompt do profile (treina o agente a usar a tag por instinto).
+The hook is wired in `.claude/settings.json` (PreToolUse). See `docs/global-deploy.md`
+for global host wiring and `docs/pbroute-directive.txt` for the directive text
+that goes into the profile's system prompt (trains the agent to use the tag by instinct).
 
-> Hooks no Piebald são cacheados na **criação do chat** — mexeu na fiação, abra um
-> chat novo (global → restart do app).
-
----
-
-## Fundação (como foi possível)
-
-Tudo se apoia em três descobertas sobre o `app.db` do Piebald
-(`C:/Users/<you>/AppData/Roaming/Piebald/app.db`), documentadas em `docs/`:
-
-1. **Roteamento de subagente é persistido** — `subagent_provider_id` / `model` /
-   `profile_id` ficam no banco; o hook escreve neles antes do subagente nascer.
-2. **Profiles vivem no banco** (`profiles` → `generation_configs` →
-   `override_gen_cfg_data.system_prompt` + effort por engine) — daí `profiles.mjs`
-   poder criá-los/editá-los programaticamente.
-3. **O web-mode expõe um WebSocket** autenticado para comandos do engine.
-
-Regras de acesso ao `app.db`: `mode=ro` sempre (o Piebald é o único writer); **não**
-usar `immutable=1` para dados ao vivo (ignora o WAL → stale); janela de ~48h; queries
-com `LIMIT`. Schema completo em `docs/app-db.md`.
+> Hooks in Piebald are cached at **chat creation** — if you modify the wiring, open a
+> new chat (global → restart the app).
 
 ---
 
-## Roadmap / em aberto
+## Foundation (how this is possible)
 
-- **Melhorar a malha de roteamento** subagente ↔ provider ↔ modelo ↔ profile: hoje a
-  rota é um estado global sequencial; o ideal é roteamento por-launch sem race.
-- Pitch ao upstream: **API/campo oficial de roteamento por subagente** (equivalente
-  ao `model:` do frontmatter do Claude Code), que tornaria o hook desnecessário.
+Everything rests on three discoveries about Piebald's `app.db`
+(`C:/Users/<you>/AppData/Roaming/Piebald/app.db`), documented in `docs/`:
+
+1. **Subagent routing is persisted** — `subagent_provider_id` / `model` /
+   `profile_id` live in the database; the hook writes to them before the subagent is created.
+2. **Profiles live in the database** (`profiles` → `generation_configs` →
+   `override_gen_cfg_data.system_prompt` + per-engine effort) — hence `profiles.mjs`
+   can create/edit them programmatically.
+3. **Web-mode exposes an authenticated WebSocket** for engine commands.
+
+Rules for accessing `app.db`: always use `mode=ro` (Piebald is the sole writer); **do not**
+use `immutable=1` for live data (bypasses the WAL → stale reads); ~48-hour retention window;
+use `LIMIT` on queries. Full schema in `docs/app-db.md`.
+
+---
+
+## Roadmap / open items
+
+- **Improve the routing mesh** subagent ↔ provider ↔ model ↔ profile: today the
+  route is a sequential global state; the ideal is per-launch routing without a race.
+- Pitch to upstream: **official per-subagent routing API/field** (equivalent to
+  Claude Code's frontmatter `model:` field), which would make the hook unnecessary.
 
 ---
 
@@ -112,24 +112,24 @@ com `LIMIT`. Schema completo em `docs/app-db.md`.
 piebald-dynamic-subagents/
 ├── README.md
 ├── hooks/
-│   ├── pretooluse-route.mjs / .cmd     # o hook de roteamento JIT (+ guard A1/A2)
-│   └── route.log                       # trilha de roteamento (runtime)
+│   ├── pretooluse-route.mjs / .cmd     # the JIT routing hook (+ guard A1/A2)
+│   └── route.log                       # routing trail (runtime)
 ├── control-plane/
-│   ├── catalog.json                    # providers/modelos/profiles (ao vivo)
-│   ├── discover-models.mjs             # regenera o catálogo
-│   ├── profiles.mjs                    # CRUD de Profiles via API
-│   ├── probe.mjs                       # valida worker real
-│   ├── pbroute-baseline.json           # baseline do changes-guard
-│   ├── orchestrate.mjs                 # orquestração de launches
-│   └── ws-client.mjs / ws-cli.mjs      # cliente WebSocket (readResult v3)
+│   ├── catalog.json                    # providers/models/profiles (live)
+│   ├── discover-models.mjs             # regenerates the catalog
+│   ├── profiles.mjs                    # Profile CRUD via API
+│   ├── probe.mjs                       # validates a real worker
+│   ├── pbroute-baseline.json           # changes-guard baseline
+│   ├── orchestrate.mjs                 # launch orchestration
+│   └── ws-client.mjs / ws-cli.mjs      # WebSocket client (readResult v3)
 ├── docs/
-│   ├── native-hook-e2e.md              # prova e2e (5 providers)
-│   ├── smoke-results.md                # 37 modelos probados
-│   ├── pbroute-directive.txt           # texto da diretiva (system prompt)
-│   ├── global-deploy.md                # fiação do hook no host
-│   ├── app-db.md                       # schema do app.db (fundação)
-│   └── websocket-protocol.md           # protocolo WS do web-mode (fundação)
+│   ├── native-hook-e2e.md              # end-to-end proof (5 providers)
+│   ├── smoke-results.md                # 37 models probed
+│   ├── pbroute-directive.txt           # directive text (system prompt)
+│   ├── global-deploy.md                # host-level hook wiring
+│   ├── app-db.md                       # app.db schema (foundation)
+│   └── websocket-protocol.md           # web-mode WS protocol (foundation)
 └── examples/
-    ├── queries.sql                     # SQL de referência
-    └── python-client.py                # leitura app.db + WebSocket
+    ├── queries.sql                     # reference SQL queries
+    └── python-client.py                # app.db reader + WebSocket client
 ```

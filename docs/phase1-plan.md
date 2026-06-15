@@ -1,124 +1,122 @@
-# Fase 1 — Plano de implementação v2 (revisado pós-review crítico)
+# Phase 1 — Implementation plan v2 (revised after critical review)
 
-> v1 passou por review crítico de um modelo diferente (claude-sonnet). Esta v2
-> incorpora os ajustes. Trail no fim do doc. Tudo se apoia em primitivos JÁ
-> VALIDADOS ao vivo. Sem MITM, sem restart, auth de assinatura legítima.
+> v1 went through a critical review by a different model (claude-sonnet). This v2
+> incorporates those adjustments. Trail at the end of the doc. Everything relies on
+> primitives ALREADY VALIDATED live. No MITM, no restart, legitimate subscription auth.
 
-## Resumo de uma linha
-Orquestrador que recebe uma frase NL, decompõe em N workers, cria 1 chat por
-worker com **provider + modelo + profile (=reasoning)** próprios, dispara a tarefa
-(paralelo com teto de concorrência), coleta resultados e limpa.
+## One-line summary
+An orchestrator that receives an NL phrase, decomposes it into N workers, creates 1 chat
+per worker with its own **provider + model + profile (=reasoning)**, fires the task
+(parallel with a concurrency ceiling), collects results, and cleans up.
 
-## Modelo conceitual
+## Conceptual model
 - **worker = { provider_id, model, profile_id, permission_mode, task, dir, title }**
-  - `profile_id` carrega reasoning/effort (herdado do profile). Reasoning NÃO é
-    por-mensagem.
-- Cada worker = chat independente → paralelo heterogêneo sem corrida no global.
+  - `profile_id` carries reasoning/effort (inherited from the profile). Reasoning is NOT
+    per-message.
+- Each worker = independent chat → heterogeneous parallel without a global race.
 
-## Shapes confirmados (do recon — corrige imprecisões da v1)
-- `create_chat` → resposta `{chat:{id,...}, project:{...}}` → **`chat_id = chat.id`**
-  (provado: chats 215, 217).
-- `send_message_streaming.parts` (shape REAL, não `[texto]`):
+## Confirmed shapes (from recon — corrects v1 inaccuracies)
+- `create_chat` → response `{chat:{id,...}, project:{...}}` → **`chat_id = chat.id`**
+  (proven: chats 215, 217).
+- `send_message_streaming.parts` (REAL shape, not `[text]`):
   ```json
   parts: [{ "type":"text", "text":{ "nodes":[{ "type":"text", "data":{ "content":"<task>" }}]}}]
   ```
-  + `branching_intended:false` (e `parent_message_id` só se o chat já tem msgs).
-- **Leitura de resultado (PRIMÁRIA, já provada): app.db.** `message_parts` →
-  texto onde `messages.parent_chat_id=chat_id`, role=assistant, status final;
-  completude via `chats.working_status` (idle). DB: `%APPDATA%\Piebald\app.db`
-  (abrir `file:...?mode=ro`).
-- Leitura SECUNDÁRIA (bônus, do piebald-remote/PROTOCOL.md, re-verificar nesta
-  versão): `get_full_chat_history {chat_id}` + eventos `StreamedChunk`
-  (variantes `TextDelta`/`FinishMessage`/`FinishSession{finish_reason,
+  + `branching_intended:false` (and `parent_message_id` only if the chat already has messages).
+- **Result reading (PRIMARY, already proven): app.db.** `message_parts` →
+  text where `messages.parent_chat_id=chat_id`, role=assistant, final status;
+  completeness via `chats.working_status` (idle). DB: `%APPDATA%\Piebald\app.db`
+  (open as `file:...?mode=ro`).
+- SECONDARY reading (bonus, from piebald-remote/PROTOCOL.md, re-verify in this
+  version): `get_full_chat_history {chat_id}` + events `StreamedChunk`
+  (variants `TextDelta`/`FinishMessage`/`FinishSession{finish_reason,
   total_generations}`) + `ChatUpdated{working_status}`.
-- **A confirmar empiricamente em 1a:** `config_id` vs `profile_id` no `create_chat`
-  — hipótese: passar só `profile_id` basta (Piebald deriva o config do profile,
-  como o `change_chat_profile` faz); `config_id` é opcional/derivado.
+- **To confirm empirically in 1a:** `config_id` vs `profile_id` in `create_chat`
+  — hypothesis: passing only `profile_id` is sufficient (Piebald derives the config
+  from the profile, as `change_chat_profile` does); `config_id` is optional/derived.
 
-## Comandos WS usados (confirmados)
+## WS commands used (confirmed)
 `create_chat`, `change_chat_profile {chat_id,profile_id,force}`, `update_chat`,
 `send_message_streaming`, `delete_chat`, `list_providers`, `list_profiles`,
-`list_chats`, `get_chat`. (Removido `update_setting` — era resíduo da Fase 0; o
-orquestrador NÃO usa o setting global.)
+`list_chats`, `get_chat`. (Removed `update_setting` — it was a Phase 0 residue;
+the orchestrator does NOT use the global setting.)
 
-## Sub-fases (reordenadas pelo review)
+## Sub-phases (reordered by review)
 
-### 1.0 — Bootstrap do TOKEN [BLOQUEANTE, isolado]
-Critério binário: o token conecta e recebe `web_access_granted`.
-- [ ] ws-client lê **`PIEBALD_WEB_TOKEN`** (env). Sem ele → falha rápida com
-      instrução: "abra a Web UI do Piebald e copie o `?token=` da URL".
-- [ ] Fallback best-effort (conveniência, não confiável): grep do log do dia em
-      `%APPDATA%\Piebald\logs\<YYYY-MM-DD>.log` por `token=<...>` — MAS validar
-      contra `web_access_granted` (token velho do log → rejeita → erro claro, não
-      obscuro). **Sem** as 4 fontes mágicas da v1.
-- [ ] (Pós-v1) avaliar usar o launcher do `piebald-remote` que escreve
-      `~/.piebald-remote/current-token` quando ele gerencia o piebald-web.
+### 1.0 — TOKEN bootstrap [BLOCKING, isolated]
+Binary criterion: the token connects and receives `web_access_granted`.
+- [ ] ws-client reads **`PIEBALD_WEB_TOKEN`** (env). Without it → fast fail with
+      instruction: "open the Piebald Web UI and copy the `?token=` from the URL".
+- [ ] Best-effort fallback (convenience, not reliable): grep today's log at
+      `%APPDATA%\Piebald\logs\<YYYY-MM-DD>.log` for `token=<...>` — BUT validate
+      against `web_access_granted` (old token from log → rejected → clear error, not
+      obscure). **Without** the 4 magic sources from v1.
+- [ ] (Post-v1) evaluate using the `piebald-remote` launcher which writes
+      `~/.piebald-remote/current-token` when it manages piebald-web.
 
-### 1a — ws-client + validação de shapes [fundação]
-- [ ] `ws-client.mjs`: connect+auth; `call(name, req, {timeoutMs})` com correlação
-      de `id` + **timeout explícito por chamada** (default 15s p/ comandos rápidos);
-      `on(eventType, cb)`; detectar `web_access_required` no meio → erro
-      "token expirou" (não genérico).
+### 1a — ws-client + shape validation [foundation]
+- [ ] `ws-client.mjs`: connect+auth; `call(name, req, {timeoutMs})` with id correlation
+      + **explicit per-call timeout** (default 15s for fast commands);
+      `on(eventType, cb)`; detect `web_access_required` mid-session → error
+      "token expired" (not generic).
 - [ ] `readResult(chatId, {timeoutMs})`: poll `app.db` (working_status idle +
-      último assistant text). Caminho do DB + query documentados e testados via Node
-      (sqlite3 CLI ou driver).
-- [ ] Validar/documentar ao vivo: resposta de `create_chat` (chat.id), shape de
-      `parts`, e `profile_id` vs `config_id`.
-- [ ] **Checkpoint:** round-trip no-op — `create_chat` → `readResult` (vazio) →
-      `delete_chat`. Confirmar `delete_chat` idempotente (chamar 2x não quebra).
+      last assistant text). DB path + query documented and tested via Node
+      (sqlite3 CLI or driver).
+- [ ] Validate/document live: `create_chat` response (chat.id), `parts` shape,
+      and `profile_id` vs `config_id`.
+- [ ] **Checkpoint:** no-op round-trip — `create_chat` → `readResult` (empty) →
+      `delete_chat`. Confirm `delete_chat` is idempotent (calling twice doesn't break).
 
-### 1b — runOne(spec) COM tratamento de erro [não é mais 1e]
+### 1b — runOne(spec) WITH error handling [no longer 1e]
 - [ ] `runOne(spec)`: `create_chat` → `send_message_streaming` → `readResult`
-      (timeout, default 180s) → `{ok, text|error, chatId, ms}`. **try/catch por
-      worker** — falha isolada, nunca propaga.
-- [ ] `permission_mode` é **campo explícito do spec** [DECISÃO ANTES DE CODAR]:
-      default `'default'` (seguro; tasks de review/leitura). `'yolo'` só quando o
-      caller opta explicitamente (tasks de implementação). Documentar o risco.
-- [ ] **Checkpoint:** 1 worker Claude (provider 3) numa task trivial, ponta-a-ponta.
+      (timeout, default 180s) → `{ok, text|error, chatId, ms}`. **try/catch per
+      worker** — isolated failure, never propagates.
+- [ ] `permission_mode` is an **explicit spec field** [DECISION BEFORE CODING]:
+      default `'default'` (safe; review/read tasks). `'yolo'` only when the
+      caller explicitly opts in (implementation tasks). Document the risk.
+- [ ] **Checkpoint:** 1 Claude worker (provider 3) on a trivial task, end-to-end.
 
-### 1c — runMany com concorrência + cleanup [executável HOJE]
-- [ ] `runMany(specs[], {maxConcurrency=3})`: paralelo com teto; backoff simples em
-      rate-limit/429 (confiabilidade, não economia).
-- [ ] **Cleanup de órfãos no início:** `list_chats` → `delete_chat` nos chats com
-      prefixo de título do orquestrador (ex.: `pbsub/`) não limpos em runs passados.
-- [ ] **Checkpoint (HOJE, sem cross-provider):** 3 workers **Claude** com **profiles
-      de reasoning distintos** (ex.: high / low / default) em paralelo; provar
-      simultaneidade por timestamps. Cross-provider (gpt/gemini) = tarefa separada,
-      gated em consertar OpenAI/Google (service_tier/store/model-id).
+### 1c — runMany with concurrency + cleanup [executable TODAY]
+- [ ] `runMany(specs[], {maxConcurrency=3})`: parallel with ceiling; simple backoff on
+      rate-limit/429 (reliability, not economy).
+- [ ] **Orphan cleanup at start:** `list_chats` → `delete_chat` for chats with the
+      orchestrator title prefix (e.g. `pbsub/`) not cleaned up from past runs.
+- [ ] **Checkpoint (TODAY, no cross-provider):** 3 **Claude** workers with **distinct
+      reasoning profiles** (e.g. high / low / default) in parallel; prove simultaneity
+      via timestamps. Cross-provider (gpt/gemini) = separate task, gated on fixing
+      OpenAI/Google (service_tier/store/model-id).
 
-### 1d — catalog.json + interface + protocolo NL
-- [ ] `catalog.json` ESTÁTICO (mantido à mão no v1): providers, models válidos,
-      profiles+effort. (Busca dinâmica no app.db = pós-POC.)
-- [ ] **Interface do `orchestrate.mjs` DEFINIDA aqui (antes do AGENTS.md):**
-      lê `specs` JSON via stdin (ou `--file`), escreve `results` JSON em stdout,
-      exit codes (0 ok, !=0 erro). 
-- [ ] `AGENTS.md`: protocolo NL → `specs[]` usando o catalog.json; regras de
-      fallback (provider/effort inexistente → mais próximo ou avisa).
+### 1d — catalog.json + interface + NL protocol
+- [ ] `catalog.json` STATIC (manually maintained in v1): providers, valid models,
+      profiles+effort. (Dynamic DB lookup = post-POC.)
+- [ ] **`orchestrate.mjs` interface DEFINED here (before AGENTS.md):**
+      reads `specs` JSON via stdin (or `--file`), writes `results` JSON to stdout,
+      exit codes (0 ok, !=0 error).
+- [ ] `AGENTS.md`: NL → `specs[]` protocol using catalog.json; fallback rules
+      (nonexistent provider/effort → closest match or warning).
 
 ### 1e — hardening
-- [ ] Reconexão / detecção de token expirado robusta.
-- [ ] Health-check de provider (pular os quebrados; usar `get_all_rate_limit_info`).
-- [ ] Consertar OpenAI/Google (service_tier=flex, store, model-ids) → habilitar
-      cross-provider de verdade.
-- [ ] (Opcional) catálogo dinâmico do app.db; criar profile por código.
+- [ ] Reconnection / robust expired-token detection.
+- [ ] Provider health-check (skip broken ones; use `get_all_rate_limit_info`).
+- [ ] Fix OpenAI/Google (service_tier=flex, store, model-ids) → enable real cross-provider.
+- [ ] (Optional) dynamic catalog from app.db; create profiles programmatically.
 
-## Decisões resolvidas (eram "em aberto")
-1. **Token v1**: só env `PIEBALD_WEB_TOKEN`, fail-fast.
-2. **Resultado**: app.db é a leitura primária (provada); WS history é bônus.
-3. **permission_mode**: por-spec, default seguro.
-4. **catalog**: json estático no v1.
-5. **config_id/profile_id**: validar em 1a; default = passar só profile_id.
+## Resolved decisions (were "open")
+1. **Token v1**: env `PIEBALD_WEB_TOKEN` only, fail-fast.
+2. **Result**: app.db is the primary read (proven); WS history is a bonus.
+3. **permission_mode**: per-spec, safe default.
+4. **catalog**: static JSON in v1.
+5. **config_id/profile_id**: validate in 1a; default = pass only profile_id.
 
-## Anti-escopo
-MITM/proxy; router-LLM separado; tradução cross-provider de payload; 4 fontes de
-token; busca dinâmica de catálogo no v1.
+## Anti-scope
+MITM/proxy; separate router-LLM; cross-provider payload translation; 4 token sources;
+dynamic catalog in v1.
 
 ---
-### Trail (v1 → v2, via review crítico de modelo diferente — claude-sonnet)
-Mudanças aceitas: token getter→env-only/isolado em 1.0; corrigido shape de `parts`;
-erro-por-worker movido p/ 1b; permission_mode explícito antes de 1b; 1c redefinido
-p/ 3 Claude com reasoning distinto (cross-provider gated); cleanup de órfãos;
-timeouts+concorrência+backoff; catalog estático; interface do orchestrate antes do
-AGENTS.md; removido `update_setting` do orquestrador. Rejeitado/corrigido: shape do
-`create_chat` (já conhecido = chat.id) e leitura de resultado (não-bloqueante, via
-app.db já provada).
+### Trail (v1 → v2, via critical review from a different model — claude-sonnet)
+Accepted changes: token getter→env-only/isolated in 1.0; corrected `parts` shape;
+per-worker error moved to 1b; explicit permission_mode before 1b; 1c redefined
+for 3 Claude workers with distinct reasoning (cross-provider gated); orphan cleanup;
+timeouts+concurrency+backoff; static catalog; orchestrate interface before AGENTS.md;
+removed `update_setting` from orchestrator. Rejected/corrected: `create_chat` shape
+(already known = chat.id) and result reading (non-blocking, via app.db already proven).

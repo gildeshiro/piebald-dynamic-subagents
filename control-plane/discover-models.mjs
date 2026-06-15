@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// discover-models.mjs — descobre AO VIVO todos os modelos de todos os providers
-// e (re)gera o catalog.json. Fonte de verdade: refresh_provider_models (bate no
-// provider) + list_profiles + app.db (effort dos profiles).
+// discover-models.mjs — discovers ALL models from ALL providers LIVE and
+// (re)generates catalog.json. Source of truth: refresh_provider_models (hits the
+// provider) + list_profiles + app.db (profile effort levels).
 //
-// Uso:  PIEBALD_WEB_TOKEN=... node control-plane/discover-models.mjs
-//        [--out catalog.json] [--cached]   (--cached usa list_available_models, não bate no provider)
+// Usage:  PIEBALD_WEB_TOKEN=... node control-plane/discover-models.mjs
+//          [--out catalog.json] [--cached]   (--cached uses list_available_models, doesn't hit the provider)
 
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
@@ -20,7 +20,7 @@ const CACHED = process.argv.includes("--cached");
 
 function sql(q) { return execFileSync("sqlite3", [DB_PATH, q], { encoding: "utf8" }).trim(); }
 
-// effort por profile (todos os engines vivem no MESMO config do profile)
+// effort per profile (all engines live in the SAME config of the profile)
 function profileEfforts() {
   const rows = sql(`SELECT p.id||'|'||p.name||'|'||p.config_id||'|'||
     COALESCE(oa.effort,'')||'|'||COALESCE(oa.thinking_mode,'')||'|'||
@@ -39,7 +39,7 @@ function profileEfforts() {
   });
 }
 
-// extrai campos úteis de um objeto-modelo (shape varia por engine)
+// extracts useful fields from a model object (shape varies by engine)
 function slimModel(m) {
   if (typeof m === "string") return { id: m };
   const out = { id: m.id || m.slug, display: m.display_name || m.display || undefined };
@@ -57,10 +57,10 @@ await pb.connect();
 const out = {
   _meta: {
     generated: new Date().toISOString(),
-    source: CACHED ? "list_available_models (cache)" : "refresh_provider_models (ao vivo)",
+    source: CACHED ? "list_available_models (cache)" : "refresh_provider_models (live)",
     regenerate: "node control-plane/discover-models.mjs",
-    reasoning_note: "No esquema Piebald, reasoning de TODOS os engines é controlado pelo PROFILE (o generation_config do profile guarda anthropic.effort + openai.reasoning_effort + google.thinking_budget juntos). Selecionar profile = selecionar reasoning. É o único lever de reasoning no nosso setup.",
-    status_semantics: "status 'ok' = o provider LISTA modelos. NÃO garante que um worker roda de fato (auth/quirk de chat-time). Validar com control-plane/probe.mjs.",
+    reasoning_note: "In the Piebald schema, reasoning for ALL engines is controlled by the PROFILE (the profile's generation_config stores anthropic.effort + openai.reasoning_effort + google.thinking_budget together). Selecting a profile = selecting reasoning. It is the only reasoning lever in our setup.",
+    status_semantics: "status 'ok' = the provider LISTS models. Does NOT guarantee that a worker actually runs (auth/chat-time quirks). Validate with control-plane/probe.mjs.",
     openai_reasoning_levels: ["low", "medium", "high", "xhigh"],
     openai_default_reasoning: "medium",
   },
@@ -91,5 +91,5 @@ try {
   out.profiles = profileEfforts();
   writeFileSync(OUT, JSON.stringify(out, null, 2));
   const total = out.providers.reduce((a, p) => a + (p.model_count || 0), 0);
-  console.error(`\nEscrito ${path.basename(OUT)}: ${out.providers.length} providers, ${total} modelos, ${out.profiles.length} profiles.`);
+  console.error(`\nWritten ${path.basename(OUT)}: ${out.providers.length} providers, ${total} models, ${out.profiles.length} profiles.`);
 } finally { pb.close(); }

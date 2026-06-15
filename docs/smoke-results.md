@@ -1,40 +1,40 @@
-# Smoke test — todos os modelos × providers (2026-06-10)
+# Smoke test — all models × providers (2026-06-10)
 
-Rodado via `control-plane/probe.mjs --concurrency 3` (task curtíssima "responda PROBE-OK"
-por combo, auto-delete no sucesso). **20/37 OK.** O resultado VIROU a suposição antiga
-("só Anthropic funciona") — hoje, via workers do piebald-web, é o **Claude que está down**.
+Run via `control-plane/probe.mjs --concurrency 3` (very short task "reply PROBE-OK"
+per combo, auto-delete on success). **20/37 OK.** The result OVERTURNED the old assumption
+("only Anthropic works") — today, via piebald-web workers, it is **Claude that is down**.
 
-## Resumo por provider
-| Provider | OK | Falhas | Observação |
+## Summary by provider
+| Provider | OK | Failures | Notes |
 |---|---|---|---|
-| ChatGPT Plus (4) | **4/4** | — | gpt-5.5, 5.4, 5.4-mini, codex-auto-review. (O "quebrado" de antes era quirk de PROFILE, não do provider.) |
-| Google jean (5) | 5/8 | 404×2, 429×1 | OK: 3.1-pro-preview, 3-pro-preview, 3-flash-preview, 2.5-flash, 2.5-flash-lite |
-| Google gildeshiro (1) | 6/8 | 404×1, 404×1 | OK: idem + 2.5-pro |
-| Antigravity jean (2) | 5/6 | 400×1 | OK: 3.1-pro-low, 3-flash, claude-opus-4-6-thinking, claude-sonnet-4-6, gpt-oss-120b |
-| Claude Max (3) | **0/11** | **401×11** | 🚨 todos `Invalid authentication credentials` |
+| ChatGPT Plus (4) | **4/4** | — | gpt-5.5, 5.4, 5.4-mini, codex-auto-review. (The former "broken" was a PROFILE quirk, not the provider.) |
+| Google work (5) | 5/8 | 404×2, 429×1 | OK: 3.1-pro-preview, 3-pro-preview, 3-flash-preview, 2.5-flash, 2.5-flash-lite |
+| Google personal (1) | 6/8 | 404×1, 404×1 | OK: same + 2.5-pro |
+| Antigravity work (2) | 5/6 | 400×1 | OK: 3.1-pro-low, 3-flash, claude-opus-4-6-thinking, claude-sonnet-4-6, gpt-oss-120b |
+| Claude Max (3) | **0/11** | **401×11** | 🚨 all `Invalid authentication credentials` |
 
-## Taxonomia das falhas (quirks pro dev team)
-- **Claude Max → HTTP 401 (todos os 11):** `authentication_error: Invalid authentication credentials`.
-  **NÃO é rate-limit nem burst** (worker isolado também deu 401). Diagnóstico: o
-  `piebald-web` é um **processo separado** do app principal e estava com a **OAuth do
-  Claude Max STALE** — a sessão principal (mesmo provider 3) funciona com o token fresco;
-  os workers via piebald-web pegaram o token velho → 401 só no Claude. Outros providers
-  no piebald-web tinham token válido → passaram. **Provável fix: relançar piebald-web.**
-  → Quirk relevante: *workers spawnados via piebald-web usam o contexto de auth do
-  piebald-web, que pode divergir do app principal.*
-- **Google 404:** model-ids não-serviveis nesta conta/engine: variantes `*-customtools`,
-  `gemini-2.0-flash`. (Aparecem em `refresh_provider_models` mas não servem chat.)
-- **Google 429:** `gemini-2.5-pro` na conta `jean` (quota); a MESMA model passou na conta
-  `gildeshiro` → é quota por-conta, não do model.
-- **Antigravity 400:** `gemini-3.1-pro-high` (problema de parâmetro no payload).
+## Failure taxonomy (quirks for the dev team)
+- **Claude Max → HTTP 401 (all 11):** `authentication_error: Invalid authentication credentials`.
+  **NOT rate-limit or burst** (an isolated worker also returned 401). Diagnosis: `piebald-web`
+  is a **separate process** from the main app and had **stale Claude Max OAuth** — the main
+  session (same provider 3) works with a fresh token; workers via piebald-web got the old
+  token → 401 for Claude only. Other providers in piebald-web had a valid token → passed.
+  **Likely fix: relaunch piebald-web.**
+  → Relevant quirk: *workers spawned via piebald-web use piebald-web's auth context,
+  which may diverge from the main app.*
+- **Google 404:** model-ids not serviceable on this account/engine: `*-customtools` variants,
+  `gemini-2.0-flash`. (They appear in `refresh_provider_models` but don't serve chat.)
+- **Google 429:** `gemini-2.5-pro` on the `work` account (quota); the SAME model passed
+  on the `personal` account → it is per-account quota, not a model issue.
+- **Antigravity 400:** `gemini-3.1-pro-high` (payload parameter issue).
 
-## Correção de código que o smoke revelou
-`readResult` esperava 60s quando `working_status='error'` sem assistant (os 401 do Claude).
-Fix: `working_status` em `{error, abandoned}` → falha **imediata**. (commitado)
+## Code fix revealed by the smoke test
+`readResult` was waiting 60s when `working_status='error'` with no assistant (the Claude 401s).
+Fix: `working_status` in `{error, abandoned}` → **immediate** failure. (committed)
 
-## Implicações
-- **Cross-provider de verdade JÁ funciona** (OpenAI + Google + Antigravity verdes) —
-  derruba o "só Anthropic" que estava nas memórias antigas.
-- O catálogo deve marcar status de **chat-time** (não só "lista") — os 404/400 são
-  model-ids que listam mas não servem. Candidato a campo `chat_ok` no catalog via probe.
-- Pro POC Piebald: anexar esta matriz como evidência de quirks reais por provider/model.
+## Implications
+- **Real cross-provider ALREADY works** (OpenAI + Google + Antigravity green) —
+  overturns the "Anthropic only" claim that was in old memories.
+- The catalog should mark **chat-time** status (not just "lists") — the 404/400 failures are
+  model-ids that list but don't serve. Candidate field `chat_ok` in the catalog via probe.
+- For the Piebald POC: attach this matrix as evidence of real per-provider/model quirks.

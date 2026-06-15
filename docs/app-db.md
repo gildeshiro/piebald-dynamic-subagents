@@ -1,64 +1,64 @@
-# app.db — Schema Completo
+# app.db — Full Schema
 
-**Arquivo:** `C:/Users/<you>/AppData/Roaming/Piebald/app.db`
-**Tamanho observado:** ~3.68 GB (2026-06-02)
-**Formato:** SQLite com WAL (Write-Ahead Logging)
-**Janela de retenção:** ~48 horas (rotação automática)
-**Acesso:** read-only via `file:<path>?mode=ro`
+**File:** `C:/Users/<you>/AppData/Roaming/Piebald/app.db`
+**Observed size:** ~3.68 GB (2026-06-02)
+**Format:** SQLite with WAL (Write-Ahead Logging)
+**Retention window:** ~48 hours (automatic rotation)
+**Access:** read-only via `file:<path>?mode=ro`
 
 ---
 
-## Tabelas principais — HTTP Traffic
+## Core tables — HTTP Traffic
 
 ### `http_requests`
 
-Cada chamada HTTP que o Piebald faz sai/entra registrada aqui.
+Every HTTP call Piebald makes is recorded here.
 
-| Coluna | Tipo | Descrição |
+| Column | Type | Description |
 |---|---|---|
-| `id` | INTEGER PK | ID único da request |
-| `request_type` | TEXT | Tipo semântico (ver `http-traffic-types.md`) |
-| `method` | TEXT | HTTP method (GET, POST...) |
-| `url` | TEXT | URL completa da chamada |
-| `request_body` | TEXT/BLOB | Body da request (pode ser grande — chat_message especialmente) |
-| `num_headers` | INTEGER | Contagem de headers |
-| `created_at` | TEXT | Timestamp ISO-8601 UTC |
+| `id` | INTEGER PK | Unique request ID |
+| `request_type` | TEXT | Semantic type (see `http-traffic-types.md`) |
+| `method` | TEXT | HTTP method (GET, POST…) |
+| `url` | TEXT | Full URL of the call |
+| `request_body` | TEXT/BLOB | Request body (can be large — `chat_message` especially) |
+| `num_headers` | INTEGER | Header count |
+| `created_at` | TEXT | ISO-8601 UTC timestamp |
 
-**Volume:** `chat_message` bodies dominam (~810 MB) porque o Piebald reenvia o
-histórico completo da conversa a cada turno.
+**Volume:** `chat_message` bodies dominate (~810 MB) because Piebald resends the
+full conversation history on every turn.
 
 ---
 
 ### `http_responses`
 
-Relação 1:1 com `http_requests` (mesmo `http_request_id` = PK).
+1:1 relationship with `http_requests` (same `http_request_id` = PK).
 
-| Coluna | Tipo | Descrição |
+| Column | Type | Description |
 |---|---|---|
-| `http_request_id` | INTEGER PK/FK | Liga a `http_requests.id` |
-| `status_code` | INTEGER | HTTP status (200, 400, 404...) |
-| `response_body` | TEXT/BLOB | Body da resposta |
-| `response_time_ms` | INTEGER | Latência em ms |
-| `created_at` | TEXT | Timestamp ISO-8601 UTC |
+| `http_request_id` | INTEGER PK/FK | Links to `http_requests.id` |
+| `status_code` | INTEGER | HTTP status (200, 400, 404…) |
+| `response_body` | TEXT/BLOB | Response body |
+| `response_time_ms` | INTEGER | Latency in ms |
+| `created_at` | TEXT | ISO-8601 UTC timestamp |
 
 ---
 
 ### `http_headers`
 
-Headers tanto da request quanto da response, indexados por posição.
-**Esta tabela é a fonte de quota.** (ver `rate-limit-headers.md`)
+Headers for both requests and responses, indexed by position.
+**This table is the quota source.** (see `rate-limit-headers.md`)
 
-| Coluna | Tipo | Descrição |
+| Column | Type | Description |
 |---|---|---|
-| `http_request_id` | INTEGER FK | Liga a `http_requests.id` |
-| `header_index` | INTEGER | Posição do header (0-based) |
-| `name` | TEXT | Nome do header (lowercase) |
-| `value` | TEXT | Valor do header |
-| `is_request` | INTEGER | **1 = header de request, 0 = header de response** |
+| `http_request_id` | INTEGER FK | Links to `http_requests.id` |
+| `header_index` | INTEGER | Header position (0-based) |
+| `name` | TEXT | Header name (lowercase) |
+| `value` | TEXT | Header value |
+| `is_request` | INTEGER | **1 = request header, 0 = response header** |
 
-**Chave composta:** `(http_request_id, header_index, is_request)`
+**Composite key:** `(http_request_id, header_index, is_request)`
 
-**Pattern de leitura para quota (último valor de um header):**
+**Pattern for reading quota (latest value of a header):**
 ```sql
 SELECT hh.value, r.created_at
 FROM http_headers hh
@@ -69,42 +69,41 @@ ORDER BY r.created_at DESC
 LIMIT 1;
 ```
 
-> ⚠️ Abrir como `file:<path>?mode=ro` — **NÃO adicionar `immutable=1`**.
-> O Piebald é um WAL writer ativo; `immutable=1` ignora o WAL e devolve stale.
+> ⚠️ Open as `file:<path>?mode=ro` — **do NOT add `immutable=1`**.
+> Piebald is an active WAL writer; `immutable=1` bypasses the WAL and returns stale data.
 
 ---
 
 ### `http_streamed_chunks`
 
-SSE (Server-Sent Events) chunks de respostas streaming.
-Cada chunk = uma linha do stream SSE.
+SSE (Server-Sent Events) chunks from streaming responses.
+Each chunk = one line of the SSE stream.
 
-| Coluna | Tipo | Descrição |
+| Column | Type | Description |
 |---|---|---|
-| `http_request_id` | INTEGER FK | Liga a `http_requests.id` |
-| `chunk_index` | INTEGER | Posição no stream |
-| `chunk_data` | TEXT | Conteúdo do chunk (ex: `data: {...}`) |
-| `created_at` | TEXT | Timestamp ISO-8601 UTC |
+| `http_request_id` | INTEGER FK | Links to `http_requests.id` |
+| `chunk_index` | INTEGER | Position in the stream |
+| `chunk_data` | TEXT | Chunk content (e.g. `data: {...}`) |
+| `created_at` | TEXT | ISO-8601 UTC timestamp |
 
 ---
 
-## Tabelas tipadas (detail tables)
+## Typed tables (detail tables)
 
-Para cada `request_type` especializado, existe uma tabela auxiliar que adiciona
-metadados específicos.
+For each specialized `request_type`, an auxiliary table adds type-specific metadata.
 
 ### `http_request_chat_message_data`
 
-| Coluna | Tipo | Descrição |
+| Column | Type | Description |
 |---|---|---|
-| `http_request_id` | INTEGER FK | Liga a `http_requests.id` |
-| `message_id` | INTEGER FK | Liga a `messages.id` (tabela principal de mensagens) |
+| `http_request_id` | INTEGER FK | Links to `http_requests.id` |
+| `message_id` | INTEGER FK | Links to `messages.id` (main messages table) |
 
-Usado para correlacionar um request HTTP com a mensagem do chat que o originou.
+Used to correlate an HTTP request with the chat message that triggered it.
 
-### Outras tabelas tipadas (estrutura análoga)
+### Other typed tables (analogous structure)
 
-| Tabela | Para request_type |
+| Table | For request_type |
 |---|---|
 | `http_request_oauth_data` | `oauth` |
 | `http_request_mcp_server_request_data` | `mcp_server_request` |
@@ -115,33 +114,33 @@ Usado para correlacionar um request HTTP com a mensagem do chat que o originou.
 
 ### `mcp_traffic_logs`
 
-Log de tráfego específico para chamadas MCP (Model Context Protocol).
-Separado de `http_requests` — registra a camada de protocol MCP sobre HTTP.
+Traffic log specific to MCP (Model Context Protocol) calls.
+Separate from `http_requests` — records the MCP protocol layer over HTTP.
 
 ---
 
-## Tabelas de configuração
+## Configuration tables
 
-Estas tabelas são **estáticas** (mudam apenas quando o usuário altera settings na TUI).
-Para elas, `immutable=1` *é* seguro e melhora performance de leitura concorrente.
+These tables are **static** (they change only when the user modifies settings in the TUI).
+For them, `immutable=1` *is* safe and improves concurrent read performance.
 
 ### `settings`
 
-Key-value store de configurações do Piebald.
+Key-value store for Piebald configuration.
 
 ```sql
--- Exemplo de keys relevantes para subagents/providers:
+-- Example keys relevant to subagents/providers:
 SELECT key, value FROM settings
 WHERE key IN (
-  'subagent_model',           -- ex: "gemini-3-flash-preview"
-  'subagent_provider_id',     -- ex: "1"
+  'subagent_model',           -- e.g. "gemini-3-flash-preview"
+  'subagent_provider_id',     -- e.g. "1"
   'subagent_use_custom_config',
-  'api_server_port',          -- vazio se desabilitado
-  'default_permission_mode'   -- ex: "yolo"
+  'api_server_port',          -- empty if disabled
+  'default_permission_mode'   -- e.g. "yolo"
 );
 ```
 
-**win-work (2026-05-31 confirmado):**
+**win-work (confirmed 2026-05-31):**
 
 | key | value |
 |---|---|
@@ -149,20 +148,20 @@ WHERE key IN (
 | `subagent_provider_id` | `1` |
 | `subagent_use_custom_config` | `1` |
 | `default_permission_mode` | `yolo` |
-| `api_server_port` | `""` (desabilitado) |
+| `api_server_port` | `""` (disabled) |
 
 ### `providers`
 
-Providers configurados na TUI.
+Providers configured in the TUI.
 
-| Coluna | Tipo | Descrição |
+| Column | Type | Description |
 |---|---|---|
-| `id` | INTEGER PK | ID do provider |
-| `name` | TEXT | Nome exibido |
-| `provider_type` | TEXT | Tipo interno (gemini, agy, claude, codex...) |
-| ... | ... | Outros campos de config |
+| `id` | INTEGER PK | Provider ID |
+| `name` | TEXT | Display name |
+| `provider_type` | TEXT | Internal type (gemini, agy, claude, codex…) |
+| … | … | Other config fields |
 
-**win-work (confirmado):**
+**win-work (confirmed):**
 
 | id | name | provider_type |
 |---|---|---|
@@ -173,28 +172,28 @@ Providers configurados na TUI.
 
 ### `provider_custom_models`
 
-Modelos customizados adicionados via TUI.
-Útil para detectar endpoints Antigravity (agy) configurados.
+Custom models added via the TUI.
+Useful for detecting Antigravity (agy) endpoints that are configured.
 
 ---
 
-## Tabelas de chat/mensagens
+## Chat/message tables
 
-> ⚠️ Contêm dados sensíveis (histórico de conversas). Acessar apenas quando
-> necessário — ex: resolver `chat_id` e `parent_message_id` para wake injection.
+> ⚠️ Contain sensitive data (conversation history). Access only when
+> necessary — e.g. resolving `chat_id` and `parent_message_id` for wake injection.
 
 ### `chats`
 
-| Coluna | Tipo | Descrição |
+| Column | Type | Description |
 |---|---|---|
-| `id` | INTEGER PK | ID do chat |
-| `is_deleted` | INTEGER | 1 = deletado |
-| `subagent_parent_chat_id` | INTEGER | NULL = chat top-level; ≠NULL = chat de subagente |
-| `last_activity_at` | TEXT | Timestamp da última atividade |
-| `title` | TEXT | Título do chat |
-| ... | ... | Outros campos |
+| `id` | INTEGER PK | Chat ID |
+| `is_deleted` | INTEGER | 1 = deleted |
+| `subagent_parent_chat_id` | INTEGER | NULL = top-level chat; ≠NULL = subagent chat |
+| `last_activity_at` | TEXT | Last activity timestamp |
+| `title` | TEXT | Chat title |
+| … | … | Other fields |
 
-**Query — chat ativo mais recente (para wake injection):**
+**Query — most recent active chat (for wake injection):**
 ```sql
 SELECT id FROM chats
 WHERE is_deleted = 0
@@ -205,31 +204,31 @@ LIMIT 1;
 
 ### `messages`
 
-| Coluna | Tipo | Descrição |
+| Column | Type | Description |
 |---|---|---|
-| `id` | INTEGER PK | ID da mensagem |
-| `parent_chat_id` | INTEGER FK | Liga a `chats.id` (**NÃO `chat_id`** — nome exato) |
+| `id` | INTEGER PK | Message ID |
+| `parent_chat_id` | INTEGER FK | Links to `chats.id` (**NOT `chat_id`** — exact name) |
 | `role` | TEXT | `user` \| `assistant` \| `system` |
-| ... | ... | Outros campos |
+| … | … | Other fields |
 
-**Query — último message_id de um chat (para parent_message_id em wake injection):**
+**Query — last message_id in a chat (for parent_message_id in wake injection):**
 ```sql
 SELECT MAX(id) FROM messages
 WHERE parent_chat_id = <chat_id>;
--- NULL = chat sem mensagens (omitir o campo na request)
+-- NULL = chat with no messages (omit the field from the request)
 ```
 
 ---
 
-## Notas de tamanho e performance
+## Size and performance notes
 
-| Tabela | Peso aproximado | Observação |
+| Table | Approximate size | Notes |
 |---|---|---|
-| `http_requests` (request_body) | ~810 MB | chat_message bodies (histórico reenviado inteiro a cada turno) |
-| `http_streamed_chunks` | variável | SSE chunks de respostas longas |
-| `http_headers` | moderado | milhares de headers por sessão |
-| `settings`, `providers` | negligível | poucas centenas de linhas |
+| `http_requests` (request_body) | ~810 MB | chat_message bodies (full history resent on every turn) |
+| `http_streamed_chunks` | variable | SSE chunks from long responses |
+| `http_headers` | moderate | thousands of headers per session |
+| `settings`, `providers` | negligible | a few hundred rows |
 
-**Dica para queries em `http_headers`:** sempre filtrar por `lower(hh.name) = '...'`
-(os nomes são case-insensitive por convenção HTTP) e usar `LIMIT` para evitar
-full-scans na tabela grande.
+**Tip for queries on `http_headers`:** always filter with `lower(hh.name) = '...'`
+(header names are case-insensitive by HTTP convention) and use `LIMIT` to avoid
+full-scans on the large table.

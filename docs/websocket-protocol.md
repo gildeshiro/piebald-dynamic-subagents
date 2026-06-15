@@ -1,13 +1,13 @@
 # WebSocket Protocol — piebald-web.exe
 
-O `piebald-web.exe` serve a interface web do Piebald em `http://127.0.0.1:7000`
-(porta padrão). O backend **não é REST** — o único ponto de API real é um
-WebSocket JSON-RPC.
+`piebald-web.exe` serves Piebald's web interface at `http://127.0.0.1:7000`
+(default port). The backend **is not REST** — the only real API endpoint is a
+JSON-RPC WebSocket.
 
-Todo o conhecimento aqui foi obtido por:
-1. Instrumentação do `WebSocket` global via `initScript` no chrome-devtools
-2. Sessão de "capture-and-block" (interceptar frame antes de chegar ao backend)
-3. Análise strings do binary `piebald-web.exe` (Rust/Rocket)
+All knowledge here was obtained by:
+1. Instrumenting the global `WebSocket` via `initScript` in chrome-devtools
+2. A "capture-and-block" session (intercepting frames before they reach the backend)
+3. String analysis of the `piebald-web.exe` binary (Rust/Rocket)
 
 ---
 
@@ -17,47 +17,47 @@ Todo o conhecimento aqui foi obtido por:
 ws://127.0.0.1:<port>/api/ws?token=<TOKEN>
 ```
 
-| Propriedade | Valor |
+| Property | Value |
 |---|---|
-| Host | `127.0.0.1` (loopback apenas) |
-| Porta padrão | `7000` |
-| Override de porta | env `PIEBALD_WEB_PORT` |
-| Autenticação | query param `?token=<TOKEN>` |
-| Bind | apenas loopback — não exposto na rede |
+| Host | `127.0.0.1` (loopback only) |
+| Default port | `7000` |
+| Port override | env `PIEBALD_WEB_PORT` |
+| Authentication | query param `?token=<TOKEN>` |
+| Bind | loopback only — not exposed on the network |
 
 ---
 
-## Token de acesso (web ownership token)
+## Access token (web ownership token)
 
-O token é um **"server ownership token"** gerado no lançamento do `piebald-web.exe`.
+The token is a **"server ownership token"** generated at `piebald-web.exe` launch.
 
-**Propriedades críticas:**
-- Gerado em runtime — **NÃO está armazenado no `app.db`**
-- **ROTACIONA a cada relançamento** de `piebald-web.exe`
-- Aparece na URL de lançamento: `http://127.0.0.1:7000/?token=<TOKEN>`
-- Passar via `--token TOKEN` ou env `PIEBALD_WEB_TOKEN`
-- **Nunca imprimir, logar, ou commitar o token**
+**Critical properties:**
+- Generated at runtime — **NOT stored in `app.db`**
+- **ROTATES on every relaunch** of `piebald-web.exe`
+- Appears in the launch URL: `http://127.0.0.1:7000/?token=<TOKEN>`
+- Pass via `--token TOKEN` or env `PIEBALD_WEB_TOKEN`
+- **Never print, log, or commit the token**
 
-Se uma conexão falhar com "auth not granted" (exit 3), o token foi rotacionado —
-é necessário re-obtê-lo da URL de launch do piebald-web.
+If a connection fails with "auth not granted" (exit 3), the token was rotated —
+you must re-obtain it from the piebald-web launch URL.
 
 ---
 
-## Handshake de autenticação
+## Authentication handshake
 
-Ao conectar, o servidor envia **imediatamente** um dos dois frames:
+On connect, the server **immediately** sends one of two frames:
 
-| Frame | Significado |
+| Frame | Meaning |
 |---|---|
-| `{"msg":"web_access_required"}` | Token ausente ou inválido — auth rejeitado |
-| `{"msg":"web_access_granted"}` | Auth OK — pode enviar comandos |
+| `{"msg":"web_access_required"}` | Token missing or invalid — auth rejected |
+| `{"msg":"web_access_granted"}` | Auth OK — commands can be sent |
 
-**Regra:** aguardar `web_access_granted` antes de enviar qualquer comando.
-Outros frames (push events) podem chegar antes do granted — ignorar.
+**Rule:** wait for `web_access_granted` before sending any command.
+Other frames (push events) may arrive before granted — ignore them.
 
 ---
 
-## Protocolo de comandos
+## Command protocol
 
 ### Request (client → server)
 
@@ -70,9 +70,9 @@ Outros frames (push events) podem chegar antes do granted — ignorar.
 }
 ```
 
-- `id`: inteiro único para correlacionar response. Sugestão: `int(time.time() * 1000) % 1_000_000`
-- `name`: nome do comando (ver §Comandos conhecidos)
-- `request`: payload específico do comando
+- `id`: unique integer for correlating responses. Suggestion: `int(time.time() * 1000) % 1_000_000`
+- `name`: command name (see §Known commands)
+- `request`: command-specific payload
 
 ### Response (server → client)
 
@@ -90,11 +90,11 @@ Outros frames (push events) podem chegar antes do granted — ignorar.
   "msg": "command_response",
   "id": <int>,
   "success": false,
-  "error": "<mensagem de erro>"
+  "error": "<error message>"
 }
 ```
 
-### Push events (server → client, não solicitados)
+### Push events (server → client, unsolicited)
 
 ```json
 {
@@ -104,19 +104,19 @@ Outros frames (push events) podem chegar antes do granted — ignorar.
 }
 ```
 
-Push events chegam assincronamente — ao esperar uma `command_response` específica,
-filtrar por `msg == "command_response" AND id == <cmd_id>` e ignorar o resto.
+Push events arrive asynchronously — when waiting for a specific `command_response`,
+filter by `msg == "command_response" AND id == <cmd_id>` and ignore the rest.
 
 ---
 
-## Comandos conhecidos
+## Known commands
 
-### `send_message_streaming` ⭐ (confirmado via capture-and-block)
+### `send_message_streaming` ⭐ (confirmed via capture-and-block)
 
-Injeta uma mensagem de usuário em um chat e dispara um novo turno do modelo.
-Funcionalmente equivalente ao usuário digitar e enviar uma mensagem na UI.
+Injects a user message into a chat and triggers a new model turn.
+Functionally equivalent to the user typing and sending a message in the UI.
 
-**Request schema exato** (capturado ao vivo 2026-06-02):
+**Exact request schema** (captured live 2026-06-02):
 
 ```json
 {
@@ -133,7 +133,7 @@ Funcionalmente equivalente ao usuário digitar e enviar uma mensagem na UI.
             {
               "type": "text",
               "data": {
-                "content": "MENSAGEM AQUI"
+                "content": "MESSAGE HERE"
               }
             }
           ]
@@ -146,66 +146,66 @@ Funcionalmente equivalente ao usuário digitar e enviar uma mensagem na UI.
 }
 ```
 
-**Campos:**
+**Fields:**
 
-| Campo | Tipo | Obrigatório | Notas |
+| Field | Type | Required | Notes |
 |---|---|---|---|
-| `chat_id` | int | ✅ | ID do chat alvo |
-| `parts` | array | ✅ | Sempre 1 elemento para texto simples |
-| `parts[0].type` | string | ✅ | Sempre `"text"` |
-| `parts[0].text.nodes[0].type` | string | ✅ | Sempre `"text"` |
-| `parts[0].text.nodes[0].data.content` | string | ✅ | Corpo da mensagem |
-| `parent_message_id` | int | condicional | `MAX(id)` de `messages WHERE parent_chat_id=chat_id`; omitir se o chat não tem mensagens |
-| `branching_intended` | bool | ✅ | Sempre `false` para wake autônomo |
+| `chat_id` | int | ✅ | Target chat ID |
+| `parts` | array | ✅ | Always 1 element for plain text |
+| `parts[0].type` | string | ✅ | Always `"text"` |
+| `parts[0].text.nodes[0].type` | string | ✅ | Always `"text"` |
+| `parts[0].text.nodes[0].data.content` | string | ✅ | Message body |
+| `parent_message_id` | int | conditional | `MAX(id)` from `messages WHERE parent_chat_id=chat_id`; omit if the chat has no messages |
+| `branching_intended` | bool | ✅ | Always `false` for autonomous wake |
 
-**Observações:**
-- `branching_intended` é o nome correto — NÃO `branching_initiated`
-- A estrutura `parts > text > nodes > data > content` é duplamente aninhada — não simplificar
-- O campo é `parent_message_id` (não `parent_chat_id` — esses são diferentes)
-- Uma response `success: true` significa que o turno foi aceito; o modelo então processa
+**Notes:**
+- `branching_intended` is the correct name — NOT `branching_initiated`
+- The `parts > text > nodes > data > content` structure is doubly nested — do not flatten it
+- The field is `parent_message_id` (not `parent_chat_id` — those are different)
+- A `success: true` response means the turn was accepted; the model then processes it
 
-### Outros comandos (identificados via instrumentação WebSocket, não testados diretamente)
+### Other commands (identified via WebSocket instrumentation, not directly tested)
 
-| Comando | Provável função |
+| Command | Likely function |
 |---|---|
-| `get_all_rate_limit_info` | Retorna info de rate-limit de todos os providers (!) |
-| `list_providers` | Lista providers configurados |
-| `get_chats_with_folders` | Lista chats agrupados por pasta |
-| `get_projects` | Lista projetos |
-| `get_user_info` | Info do usuário logado |
-| `get_settings` | Settings atuais do Piebald |
-| `get_subscription` | Info da assinatura |
-| `update_chat_draft` | Atualiza rascunho do chat (auto-save) |
+| `get_all_rate_limit_info` | Returns rate-limit info for all providers (!) |
+| `list_providers` | Lists configured providers |
+| `get_chats_with_folders` | Lists chats grouped by folder |
+| `get_projects` | Lists projects |
+| `get_user_info` | Logged-in user info |
+| `get_settings` | Current Piebald settings |
+| `get_subscription` | Subscription info |
+| `update_chat_draft` | Updates the chat draft (auto-save) |
 
-> ⚠️ Os nomes de comando **não aparecem como literals no bundle `main-*.js`**
-> (são montados em runtime). Para descobrir novos comandos: instrumentar o
-> WebSocket global no browser e capturar frames reais da UI.
-> Ver `§Como descobrir novos comandos` abaixo.
+> ⚠️ Command names **do not appear as literals in the `main-*.js` bundle**
+> (they are assembled at runtime). To discover new commands: instrument the
+> global WebSocket in the browser and capture real UI frames.
+> See `§How to discover new commands` below.
 
 ---
 
-## Verificado ao vivo: end-to-end wake injection (2026-06-02)
+## Verified live: end-to-end wake injection (2026-06-02)
 
-Teste realizado:
-1. Chat 21 (throwaway), `parent_message_id = 520` (confirmado via `MAX(id)` no `app.db`)
-2. Token obtido da URL de launch do `piebald-web.exe`
-3. Frame `send_message_streaming` enviado
+Test performed:
+1. Chat 21 (throwaway), `parent_message_id = 520` (confirmed via `MAX(id)` in `app.db`)
+2. Token obtained from the `piebald-web.exe` launch URL
+3. `send_message_streaming` frame sent
 4. Response: `success: true`
-5. Novo turno do modelo iniciado (visível no app.db — nova mensagem de user + row de assistant)
-6. O turno do modelo falhou com `HTTP 404` do endpoint `daily-cloudcode-pa.sandbox.googleapis.com`
-   (provider `antigravity` com configuração quebrada no chat de teste)
+5. New model turn started (visible in app.db — new user message + assistant row)
+6. The model turn failed with `HTTP 404` from `daily-cloudcode-pa.sandbox.googleapis.com`
+   (`antigravity` provider with broken configuration in the test chat)
 
-**Conclusão:** o mecanismo de injeção funciona end-to-end. O erro foi de provider
-no chat de teste, não do protocolo.
+**Conclusion:** the injection mechanism works end-to-end. The error was a provider
+issue in the test chat, not a protocol issue.
 
 ---
 
-## Como descobrir novos comandos
+## How to discover new commands
 
-### Método 1: Instrumentação de WebSocket no browser
+### Method 1: WebSocket instrumentation in the browser
 
 ```javascript
-// Executar no DevTools Console com a página do Piebald aberta
+// Run in DevTools Console with the Piebald page open
 const _orig = WebSocket.prototype.send;
 WebSocket.prototype.send = function(data) {
   if (typeof data === 'string') {
@@ -220,52 +220,52 @@ WebSocket.prototype.send = function(data) {
 };
 ```
 
-Depois: interagir com a UI normalmente e observar os logs.
+Then: interact with the UI normally and observe the logs.
 
-### Método 2: Captura via `initScript` (chrome-devtools MCP)
+### Method 2: Capture via `initScript` (chrome-devtools MCP)
 
-O `chrome-devtools` MCP tem um parâmetro `initScript` que injeta JavaScript
-antes da página carregar — permite capturar o handshake completo desde o início.
+The `chrome-devtools` MCP has an `initScript` parameter that injects JavaScript
+before the page loads — allowing you to capture the full handshake from the start.
 
-### Método 3: Capture-and-block
+### Method 3: Capture-and-block
 
-Para capturar o schema exato de um comando sem executá-lo de verdade:
-1. Abrir DevTools
-2. Injetar interceptor que armazena o frame em `window.__capturedFrames`
-3. Realizar a ação na UI
-4. Ler `window.__capturedFrames` antes que o frame seja enviado
+To capture the exact schema of a command without actually executing it:
+1. Open DevTools
+2. Inject an interceptor that stores the frame in `window.__capturedFrames`
+3. Perform the action in the UI
+4. Read `window.__capturedFrames` before the frame is sent
 
 ---
 
-## `wake-inject.py` — cliente implementado
+## `wake-inject.py` — implemented client
 
-O script `C:\Projects\octo-fullstep-forge\skills\octo-fullstep\scripts\wake-inject.py`
-implementa um cliente WebSocket completo para `send_message_streaming`.
+The script `C:\Projects\octo-fullstep-forge\skills\octo-fullstep\scripts\wake-inject.py`
+implements a full WebSocket client for `send_message_streaming`.
 
-**Uso:**
+**Usage:**
 ```bash
-# Dry-run (sem envio — imprime o frame que seria enviado)
-python wake-inject.py --text "mensagem" --dry-run
+# Dry-run (no send — prints the frame that would be sent)
+python wake-inject.py --text "message" --dry-run
 
-# Envio real para chat ativo
-PIEBALD_WEB_TOKEN=<token> python wake-inject.py --text "mensagem"
+# Live send to active chat
+PIEBALD_WEB_TOKEN=<token> python wake-inject.py --text "message"
 
-# Envio para chat específico
+# Send to specific chat
 PIEBALD_WEB_TOKEN=<token> python wake-inject.py \
-    --text "mensagem" \
+    --text "message" \
     --chat-id 21 \
     --port 7000
 ```
 
-Exit codes: 0=ok, 2=token/text faltando, 3=auth rejeitado, 4=comando rejeitado, 5=chat não encontrado.
+Exit codes: 0=ok, 2=token/text missing, 3=auth rejected, 4=command rejected, 5=chat not found.
 
 ---
 
-## Observações sobre o binary `piebald-web.exe`
+## Notes on the `piebald-web.exe` binary
 
-- Runtime: **Rust** com framework **Rocket** (HTTP server)
-- As rotas `/api/*` são catch-alls do SPA frontend — o único endpoint real é o WebSocket
-- O binary tem o parâmetro `--port`
-- App versão **0.4.0** (identificado via WebSocket frame de `web_access_granted`)
-- Não expõe Swagger/OpenAPI
-- A lógica de comandos é construída em runtime — os nomes não aparecem em strings literais
+- Runtime: **Rust** with **Rocket** framework (HTTP server)
+- The `/api/*` routes are SPA frontend catch-alls — the only real endpoint is the WebSocket
+- The binary accepts the `--port` parameter
+- App version **0.4.0** (identified via `web_access_granted` WebSocket frame)
+- No Swagger/OpenAPI exposed
+- Command logic is built at runtime — names do not appear as literal strings

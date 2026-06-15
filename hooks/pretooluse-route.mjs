@@ -1,16 +1,16 @@
-// pretooluse-route.mjs — PreToolUse hook: roteia o cérebro do subagente NATIVO
-// just-in-time, escrevendo subagent_provider_id/model/profile_id DIRETO no app.db
-// (tabela settings) ANTES da criação do subagente. SEMPRE permite a tool (exit 0).
+// pretooluse-route.mjs — PreToolUse hook: routes the native subagent's brain
+// just-in-time by writing subagent_provider_id/model/profile_id DIRECTLY into app.db
+// (settings table) BEFORE the subagent is created. ALWAYS allows the tool (exit 0).
 //
-// POR QUE DB E NÃO WS (provado 2026-06-14): o Piebald (app principal E piebald-web)
-// relê subagent_* do app.db no momento em que cria o subagente nativo. Um UPDATE
-// local de milissegundos basta — SEM piebald-web, SEM token, SEM liveness. O
-// PreToolUse bloqueia até o exit 0, então o write commita ANTES da criação.
-// WS fica como fallback best-effort só se o write no DB falhar.
+// WHY DB AND NOT WS (proven 2026-06-14): Piebald (both the main app and piebald-web)
+// re-reads subagent_* from app.db at the moment it creates a native subagent. A local
+// UPDATE taking milliseconds is sufficient — NO piebald-web, NO token, NO liveness check.
+// PreToolUse blocks until exit 0, so the write commits BEFORE the subagent is created.
+// WS remains as a best-effort fallback only if the DB write fails.
 //
-// Tag no prompt do subagente:  [[pbroute provider=4 model=gpt-5.5 profile=7]]
-// (qualquer subconjunto; só os campos presentes são setados.)
-// Log de diagnóstico em hooks/route.log.
+// Tag in the subagent's prompt:  [[pbroute provider=4 model=gpt-5.5 profile=7]]
+// (any subset; only the present fields are set.)
+// Diagnostic log at hooks/route.log.
 
 import { readFileSync, appendFileSync, existsSync } from "node:fs";
 import os from "node:os";
@@ -31,7 +31,7 @@ const KEY = { provider: "subagent_provider_id", model: "subagent_model", profile
 
 function log(line) { try { appendFileSync(LOG, `[${new Date().toISOString()}] ${line}\n`); } catch {} }
 
-// ---- caminho principal: write direto no app.db ----
+// ---- main path: direct write into app.db ----
 function writeDb(updates) {
   const db = new DatabaseSync(DB_PATH);
   try {
@@ -50,7 +50,7 @@ function writeDb(updates) {
   } finally { db.close(); }
 }
 
-// ---- fallback dormente: WS update_setting (só se o DB write estourar) ----
+// ---- dormant fallback: WS update_setting (only if DB write fails) ----
 function dayLogTokens() {
   try {
     const d = new Date();
@@ -78,9 +78,9 @@ async function wsFallback(updates) {
       for (const [k, v] of Object.entries(updates)) await pb.call("update_setting", { key: KEY[k], value: String(v) });
       pb.close();
       return true;
-    } catch { /* próximo candidato */ }
+    } catch { /* try next candidate */ }
   }
-  throw new Error("nenhum token WS vivo");
+  throw new Error("no live WS token");
 }
 
 async function resetBaseline(tool, reason) {
@@ -89,15 +89,15 @@ async function resetBaseline(tool, reason) {
   catch { log("no baseline file, skip reset"); return; }
   const updates = {};
   for (const k of ["provider", "model", "profile"]) if (baseline[k] !== undefined) updates[k] = baseline[k];
-  if (!Object.keys(updates).length) { log("baseline sem campos válidos -> nada"); return; }
+  if (!Object.keys(updates).length) { log("baseline has no valid fields -> nothing to do"); return; }
   log(`${reason} -> reset baseline ${JSON.stringify(updates)} tool=${tool}`);
   try {
     writeDb(updates);
     log(`RESET OK (db) -> ${JSON.stringify(updates)}`);
   } catch (e) {
-    log(`DB reset falhou (${e.message}) -> WS fallback`);
+    log(`DB reset failed (${e.message}) -> WS fallback`);
     try { await wsFallback(updates); log(`RESET OK (ws) -> ${JSON.stringify(updates)}`); }
-    catch (e2) { log(`RESET ERRO (db+ws): ${e2.message}`); }
+    catch (e2) { log(`RESET ERROR (db+ws): ${e2.message}`); }
   }
 }
 
@@ -108,7 +108,7 @@ async function main() {
   const input = ev.tool_input || {};
   log(`fired tool=${tool} input_keys=${Array.isArray(input) ? "array" : Object.keys(input).join(",")}`);
 
-  // GATE: só age no tool de subagente NATIVO (neste runtime = `Agent`).
+  // GATE: only acts on the NATIVE subagent tool (in this runtime = `Agent`).
   const NATIVE_SUBAGENT_TOOLS = new Set(["Agent", "LaunchSubagent", "Task"]);
   if (!NATIVE_SUBAGENT_TOOLS.has(tool)) return;
 
@@ -116,21 +116,20 @@ async function main() {
     (typeof input === "string" ? input : JSON.stringify(input));
   const m = String(promptText).match(/\[\[pbroute([^\]]*)\]\]/i);
   if (!m) { await resetBaseline(tool, "pbroute absent"); return; }
-
   const args = m[1];
   const get = (k) => { const r = args.match(new RegExp(k + "\\s*=\\s*([^\\s\\]]+)")); return r ? r[1] : undefined; };
   const updates = {};
   for (const k of ["provider", "model", "profile"]) { const v = get(k); if (v !== undefined) updates[k] = v; }
-  if (!Object.keys(updates).length) { await resetBaseline(tool, "pbroute sem campos válidos"); return; }
+  if (!Object.keys(updates).length) { await resetBaseline(tool, "pbroute with no valid fields"); return; }
   log(`pbroute DETECTED ${JSON.stringify(updates)} tool=${tool}`);
 
   try {
     writeDb(updates);
     log(`ROUTED OK (db) -> ${JSON.stringify(updates)}`);
   } catch (e) {
-    log(`DB write falhou (${e.message}) -> WS fallback`);
+    log(`DB write failed (${e.message}) -> WS fallback`);
     try { await wsFallback(updates); log(`ROUTED OK (ws) -> ${JSON.stringify(updates)}`); }
-    catch (e2) { log(`ROUTE ERRO (db+ws): ${e2.message}`); }
+    catch (e2) { log(`ROUTE ERROR (db+ws): ${e2.message}`); }
   }
 }
-main().finally(() => process.exit(0)); // nunca bloqueia a tool
+main().finally(() => process.exit(0)); // never blocks the tool

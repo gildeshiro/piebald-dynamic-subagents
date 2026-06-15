@@ -1,14 +1,14 @@
 #!/usr/bin/env node
-// probe.mjs — harness p/ a SESSÃO DEDICADA de probe (não roda no dia-a-dia).
-// Itera provider × modelo do catalog.json, dispara 1 task trivial por combo,
-// e captura status/erro/quirk. Resultado serve p/ completar o catálogo e
-// reportar quirks ao dev team do Piebald.
+// probe.mjs — harness for the DEDICATED probe session (not run day-to-day).
+// Iterates provider × model from catalog.json, fires 1 trivial task per combo,
+// and captures status/error/quirk. Results are used to complete the catalog and
+// report quirks to the Piebald dev team.
 //
-// Uso:  PIEBALD_WEB_TOKEN=... node control-plane/probe.mjs [--keep] [--concurrency N]
+// Usage:  PIEBALD_WEB_TOKEN=... node control-plane/probe.mjs [--keep] [--concurrency N]
 //
-// NOTA: effort/reasoning por combo exige profiles por effort (ainda não existem).
-// Este probe v1 cobre provider×modelo com o profile default. Probe de effort =
-// próxima iteração (criar profiles ou achar override inline).
+// NOTE: effort/reasoning per combo requires effort-specific profiles (not yet created).
+// This probe v1 covers provider×model with the default profile. Effort probe =
+// next iteration (create profiles or find an inline override).
 
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -22,20 +22,20 @@ const keep = process.argv.includes("--keep");
 const ci = process.argv.indexOf("--concurrency");
 const maxConcurrency = ci !== -1 ? Number(process.argv[ci + 1]) : 2;
 
-// matriz provider × modelo
+// provider × model matrix
 const specs = [];
 for (const p of catalog.providers) {
   for (const m of p.models || []) {
     specs.push({
       provider_id: p.id, model: m.id,
-      task: "Responda com exatamente isto e nada mais: PROBE-OK. Nao use ferramentas.",
+      task: "Reply with exactly this and nothing else: PROBE-OK. Do not use tools.",
       keep, title: `pbprobe/${p.id}-${m.id}`,
       _provider: p.name, _status_hint: p.status,
     });
   }
 }
 
-console.error(`Probe: ${specs.length} combos (provider×modelo), concorrência ${maxConcurrency}.`);
+console.error(`Probe: ${specs.length} combos (provider×model), concurrency ${maxConcurrency}.`);
 const pb = new PiebaldWS(getToken());
 await pb.connect();
 try {
@@ -50,5 +50,5 @@ try {
   }));
   console.log(JSON.stringify({ probe: rows }, null, 2));
   const okN = rows.filter((r) => r.ok).length;
-  console.error(`\n${okN}/${rows.length} OK. (chats ${keep ? "MANTIDOS p/ inspeção" : "deletados no sucesso"})`);
+  console.error(`\n${okN}/${rows.length} OK. (chats ${keep ? "KEPT for inspection" : "deleted on success"})`);
 } finally { pb.close(); }

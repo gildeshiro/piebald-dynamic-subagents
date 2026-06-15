@@ -1,55 +1,55 @@
 # HTTP Traffic Types — request_type values
 
-O campo `request_type` em `http_requests` classifica semanticamente cada
-chamada HTTP que o Piebald realiza. Este documento descreve cada tipo,
-o que dispara, para onde vai, e o que observar.
+The `request_type` field in `http_requests` semantically classifies each
+HTTP call that Piebald makes. This document describes each type, what
+triggers it, where it goes, and what to look for.
 
 ---
 
-## Tabela completa
+## Full table
 
-| request_type | Quem dispara | Destino típico | Relevância |
+| request_type | Triggered by | Typical destination | Relevance |
 |---|---|---|---|
-| `chat_message` | Turno de chat (user → model) | Provider API (Claude, Codex, Gemini...) | ⭐⭐⭐ Alta — principal source de quota headers |
-| `mcp_server_request` | Ferramenta MCP sendo chamada | MCP server local ou remoto | ⭐⭐ Média — diagnosticar MCP latência |
-| `web_fetch` | Tool `WebFetch` no chat | URL externa | ⭐ Baixa — auditoria de fetch |
-| `web_search` | Tool `WebSearch` | Motor de busca | ⭐ Baixa |
-| `model_listing` | Piebald listando modelos disponíveis | Provider API | ⭐ Baixa — detectar quando Piebald refaz discovery |
-| `title_generation` | Geração automática de título do chat | Provider API (geralmente modelo rápido) | ⭐ Baixa |
-| `context_compaction` | Compactação de contexto longo | Provider API | ⭐⭐ Média — consome quota; útil identificar |
-| `claude_code_other` | Chamadas Claude Code internas | Anthropic API | ⭐⭐ Média — contribui para quota Claude |
-| `embedding` | Geração de embedding (busca semântica) | Embedding endpoint | ⭐ Baixa |
-| `oauth` | Flow OAuth (autenticação provider) | OAuth endpoint do provider | ⭐ Baixa — só no auth/refresh |
-| `system_service` | Serviço interno do Piebald | Varia | ⭐ Baixa |
-| `http_api_server` | API server local do Piebald (se habilitado) | localhost | ⭐ Baixa — raro (api_server_port desabilitado por padrão) |
+| `chat_message` | Chat turn (user → model) | Provider API (Claude, Codex, Gemini…) | ⭐⭐⭐ High — primary source of quota headers |
+| `mcp_server_request` | MCP tool being called | Local or remote MCP server | ⭐⭐ Medium — diagnose MCP latency |
+| `web_fetch` | `WebFetch` tool in chat | External URL | ⭐ Low — fetch audit |
+| `web_search` | `WebSearch` tool | Search engine | ⭐ Low |
+| `model_listing` | Piebald listing available models | Provider API | ⭐ Low — detect when Piebald re-runs discovery |
+| `title_generation` | Automatic chat title generation | Provider API (usually fast model) | ⭐ Low |
+| `context_compaction` | Long-context compaction | Provider API | ⭐⭐ Medium — consumes quota; useful to identify |
+| `claude_code_other` | Internal Claude Code calls | Anthropic API | ⭐⭐ Medium — contributes to Claude quota |
+| `embedding` | Embedding generation (semantic search) | Embedding endpoint | ⭐ Low |
+| `oauth` | OAuth flow (provider authentication) | Provider OAuth endpoint | ⭐ Low — only on auth/refresh |
+| `system_service` | Piebald internal service | Varies | ⭐ Low |
+| `http_api_server` | Piebald local API server (if enabled) | localhost | ⭐ Low — rare (api_server_port disabled by default) |
 
 ---
 
-## Detalhes por tipo
+## Details per type
 
-### `chat_message` — O mais importante
+### `chat_message` — The most important
 
-Toda mensagem enviada no chat gera um registro `chat_message`. A request body
-contém o **histórico completo** da conversa (não apenas a última mensagem) —
-isso é por design do Piebald e explica por que `http_requests.request_body`
-domina o tamanho do banco (~810 MB).
+Every chat message generates a `chat_message` record. The request body
+contains the **full** conversation history (not just the last message) —
+this is by Piebald's design and explains why `http_requests.request_body`
+dominates the database size (~810 MB).
 
-**O que a response traz:**
-- Body: stream SSE com a resposta do modelo (chunks em `http_streamed_chunks`)
-- Headers de response (`is_request=0` em `http_headers`):
-  - Para Claude: `anthropic-ratelimit-unified-*` (quota)
-  - Para Codex: `x-codex-*` (quota)
-  - Para outros providers: depende do provider
+**What the response carries:**
+- Body: SSE stream with the model's response (chunks in `http_streamed_chunks`)
+- Response headers (`is_request=0` in `http_headers`):
+  - For Claude: `anthropic-ratelimit-unified-*` (quota)
+  - For Codex: `x-codex-*` (quota)
+  - For other providers: depends on the provider
 
-**Tabela auxiliar:** `http_request_chat_message_data`
+**Auxiliary table:** `http_request_chat_message_data`
 ```sql
--- Achar o http_request_id correspondente a uma messages.id específica
+-- Find the http_request_id corresponding to a specific messages.id
 SELECT http_request_id
 FROM http_request_chat_message_data
 WHERE message_id = <messages.id>;
 ```
 
-**Query: listar chamadas de chat recentes com provider e status**
+**Query: list recent chat calls with provider and status**
 ```sql
 SELECT r.id, r.url, resp.status_code, resp.response_time_ms, r.created_at
 FROM http_requests r
@@ -61,24 +61,24 @@ LIMIT 20;
 
 ---
 
-### `mcp_server_request` — Ferramentas MCP
+### `mcp_server_request` — MCP tools
 
-Cada vez que o modelo chama uma ferramenta MCP (ex: `chrome-devtools`, `github`,
-`whatsapp`), o Piebald registra um `mcp_server_request`.
+Every time the model calls an MCP tool (e.g. `chrome-devtools`, `github`,
+`whatsapp`), Piebald records an `mcp_server_request`.
 
-**Tabela auxiliar:** `http_request_mcp_server_request_data`
-(provavelmente contém tool name + server name)
+**Auxiliary table:** `http_request_mcp_server_request_data`
+(likely contains tool name + server name)
 
-**Também existe:** `mcp_traffic_logs` — tabela separada com log de tráfego MCP
-de baixo nível (mensagens JSON-RPC de ida e volta).
+**Also exists:** `mcp_traffic_logs` — a separate table with low-level MCP
+traffic logs (JSON-RPC messages in both directions).
 
-**Útil para:**
-- Diagnosticar latência de MCP servers
-- Identificar quais ferramentas consomem mais tempo
-- Detectar falhas de MCP (status_code ≠ 200)
+**Useful for:**
+- Diagnosing MCP server latency
+- Identifying which tools consume the most time
+- Detecting MCP failures (status_code ≠ 200)
 
 ```sql
--- MCP requests mais lentos
+-- Slowest MCP requests
 SELECT r.url, resp.response_time_ms, r.created_at
 FROM http_requests r
 JOIN http_responses resp ON resp.http_request_id = r.id
@@ -89,16 +89,16 @@ LIMIT 10;
 
 ---
 
-### `context_compaction` — Compactação de contexto
+### `context_compaction` — Context compaction
 
-Quando o contexto da conversa fica muito longo, o Piebald dispara uma chamada
-de compactação automática (resume/summarize).
+When the conversation context gets too long, Piebald triggers an automatic
+compaction call (resume/summarize).
 
-**Relevância:** consome quota Claude/Codex e pode afetar o estado do chat de
-forma inesperada. Útil identificar quando isso ocorreu.
+**Relevance:** consumes Claude/Codex quota and can affect chat state
+unexpectedly. Useful to know when this occurred.
 
 ```sql
--- Detectar compactações nas últimas 24h
+-- Detect compactions in the last 24h
 SELECT r.id, r.url, resp.status_code, r.created_at
 FROM http_requests r
 JOIN http_responses resp ON resp.http_request_id = r.id
@@ -109,12 +109,12 @@ ORDER BY r.created_at DESC;
 
 ---
 
-### `web_fetch` e `web_search`
+### `web_fetch` and `web_search`
 
-Gerados pelas tools `WebFetch` e `WebSearch` respectivamente.
+Generated by the `WebFetch` and `WebSearch` tools respectively.
 
 ```sql
--- URLs buscadas hoje
+-- URLs fetched today
 SELECT r.url, resp.status_code, r.created_at
 FROM http_requests r
 JOIN http_responses resp ON resp.http_request_id = r.id
@@ -125,41 +125,41 @@ ORDER BY r.created_at DESC;
 
 ---
 
-### `model_listing` — Discovery de modelos
+### `model_listing` — Model discovery
 
-Piebald periodicamente lista os modelos disponíveis em cada provider configurado.
-Útil para detectar quando um provider foi re-autenticado ou teve modelos alterados.
+Piebald periodically lists available models from each configured provider.
+Useful for detecting when a provider was re-authenticated or had models updated.
 
 ---
 
 ### `claude_code_other`
 
-Chamadas feitas pelo runtime do Claude Code para a Anthropic API que não são
-chat turns (ex: algumas operações internas, subagent spawns). Contribuem para
-a quota `anthropic-ratelimit-unified-*` da mesma forma que `chat_message`.
+Calls made by the Claude Code runtime to the Anthropic API that are not
+chat turns (e.g. some internal operations, subagent spawning). They contribute
+to the `anthropic-ratelimit-unified-*` quota the same way `chat_message` does.
 
 ---
 
-## Como identificar o provider de uma request
+## Identifying the provider of a request
 
-O campo `url` em `http_requests` revela o provider:
+The `url` field in `http_requests` reveals the provider:
 
-| Pattern na URL | Provider |
+| URL pattern | Provider |
 |---|---|
 | `api.anthropic.com` | Claude (Anthropic) |
 | `api.openai.com` | Codex/GPT (OpenAI) |
 | `generativelanguage.googleapis.com` | Gemini (Google) |
 | `daily-cloudcode-pa.sandbox.googleapis.com` | Antigravity/agy (Google internal) |
-| `api.deepseek.com` | DeepSeek (mas DeepSeek via cmdc NÃO passa pelo Piebald) |
+| `api.deepseek.com` | DeepSeek (but DeepSeek via cmdc does NOT go through Piebald) |
 
 ```sql
--- Distribuição de chamadas por provider (últimas 48h)
+-- Distribution of calls by provider (last 48h)
 SELECT
   CASE
     WHEN url LIKE '%anthropic.com%'      THEN 'claude'
     WHEN url LIKE '%openai.com%'         THEN 'codex'
     WHEN url LIKE '%googleapis.com%'     THEN 'gemini/agy'
-    ELSE 'outros'
+    ELSE 'other'
   END AS provider,
   COUNT(*) AS total,
   COUNT(CASE WHEN resp.status_code = 200 THEN 1 END) AS ok,
@@ -173,13 +173,12 @@ ORDER BY total DESC;
 
 ---
 
-## Notas importantes
+## Important notes
 
-- **DeepSeek via cmdc NÃO aparece aqui.** O cmdc roda como proxy local (`:8089`)
-  e não é proxiado pelo Piebald. Para quota DeepSeek: usar a API direta.
-- **Gemini-cli vs agy:** ambos podem aparecer com URLs `googleapis.com`, mas
-  endpoints distintos. agy usa `daily-cloudcode-pa.sandbox.googleapis.com`.
-- **Subagente Piebald (gemini-3-flash-preview):** quando o modelo interno do
-  Piebald spawna um subagente, ele também gera `chat_message` requests. Estes
-  aparecem nas tabelas normalmente e contribuem para quota do provider configurado
-  como subagent.
+- **DeepSeek via cmdc does NOT appear here.** cmdc runs as a local proxy (`:8089`)
+  and is not proxied by Piebald. For DeepSeek quota: use the direct API.
+- **Gemini-cli vs agy:** both can appear with `googleapis.com` URLs, but on
+  different endpoints. agy uses `daily-cloudcode-pa.sandbox.googleapis.com`.
+- **Piebald subagent (gemini-3-flash-preview):** when Piebald's internal model
+  spawns a subagent, it also generates `chat_message` requests. These appear in
+  the tables normally and contribute to the configured subagent provider's quota.

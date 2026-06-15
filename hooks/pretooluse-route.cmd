@@ -1,4 +1,4 @@
 @echo off
-REM Wrapper p/ o PATH minimo do cmd /C que o Piebald usa (node nao esta nele).
-REM Path 8.3 evita o espaco em "Program Files". stdin flui pro node.
+REM Wrapper for the minimal PATH of cmd /C that Piebald uses (node is not in it).
+REM 8.3 path avoids the space in "Program Files". stdin is piped to node.
 "C:\PROGRA~1\nodejs\node.exe" "%~dp0pretooluse-route.mjs"

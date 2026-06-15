@@ -1,20 +1,20 @@
 """
-python-client.py — Cliente Python para Piebald app.db + WebSocket
+python-client.py — Python client for Piebald app.db + WebSocket
 piebald-dynamic-subagents
 
-Dois módulos principais:
-  - PiebaldDB    : leitura read-only do app.db (quota, config, chats)
-  - PiebaldWS    : cliente WebSocket para o piebald-web.exe
+Two main modules:
+  - PiebaldDB    : read-only access to app.db (quota, config, chats)
+  - PiebaldWS    : WebSocket client for piebald-web.exe
 
-Dependências:
+Dependencies:
   - Python 3.12+
   - websockets >= 16.0  (pip install websockets)
   - sqlite3             (stdlib)
 
-Uso rápido:
-  python python-client.py quota           → painel de quota
-  python python-client.py inject "texto"  → injeta no chat ativo (requer PIEBALD_WEB_TOKEN)
-  python python-client.py info            → config/providers/chat ativo
+Quick usage:
+  python python-client.py quota           → quota dashboard
+  python python-client.py inject "text"   → inject into active chat (requires PIEBALD_WEB_TOKEN)
+  python python-client.py info            → config/providers/active chat
 """
 
 import argparse
@@ -40,19 +40,19 @@ DEFAULT_PORT = 7000
 
 class PiebaldDB:
     """
-    Acesso read-only ao Piebald app.db.
+    Read-only access to the Piebald app.db.
 
-    Regras:
-      - Sempre abrir com mode=ro
-      - NUNCA usar immutable=1 para dados ao vivo (quota, requests recentes)
-        → immutable=1 ignora o WAL e retorna valores stale
-      - immutable=1 é OK para settings/providers (tabelas estáticas)
+    Rules:
+      - Always open with mode=ro
+      - NEVER use immutable=1 for live data (quota, recent requests)
+        → immutable=1 bypasses the WAL and returns stale values
+      - immutable=1 is OK for settings/providers (static tables)
     """
 
     def __init__(self, db_path: str = DEFAULT_DB, *, static: bool = False):
         """
-        db_path : caminho para o app.db
-        static  : se True, adiciona immutable=1 (só para settings/providers)
+        db_path : path to app.db
+        static  : if True, adds immutable=1 (only for settings/providers)
         """
         self.db_path = db_path
         suffix = "&immutable=1" if static else ""
@@ -65,8 +65,8 @@ class PiebaldDB:
 
     def get_header(self, header_name: str) -> Optional[tuple[str, str]]:
         """
-        Retorna (value, created_at) do header de response mais recente
-        com o nome dado. Retorna None se não encontrado.
+        Returns (value, created_at) of the most recent response header
+        with the given name. Returns None if not found.
         """
         sql = """
             SELECT hh.value, r.created_at
@@ -83,8 +83,8 @@ class PiebaldDB:
 
     def get_headers_matching(self, pattern: str) -> list[dict]:
         """
-        Retorna lista de {name, value, as_of} para headers de response
-        cujo nome contém o padrão (LIKE), pegando o mais recente de cada nome.
+        Returns a list of {name, value, as_of} for response headers
+        whose name contains the pattern (LIKE), taking the most recent of each name.
         """
         sql = """
             SELECT lower(hh.name) AS name, hh.value, r.created_at AS as_of
@@ -108,8 +108,8 @@ class PiebaldDB:
 
     def quota_claude(self) -> dict:
         """
-        Retorna dict com os headers de quota do Claude (anthropic-ratelimit-unified-*).
-        Retorna {} se não houver chamadas recentes ao Claude via Piebald.
+        Returns a dict with Claude quota headers (anthropic-ratelimit-unified-*).
+        Returns {} if there are no recent Claude calls via Piebald.
         """
         rows = self.get_headers_matching("anthropic-ratelimit%")
         if not rows:
@@ -122,8 +122,8 @@ class PiebaldDB:
 
     def quota_codex(self) -> dict:
         """
-        Retorna dict com os headers de quota do Codex (x-codex-*).
-        Retorna {} se não houver chamadas recentes ao Codex via Piebald.
+        Returns a dict with Codex quota headers (x-codex-*).
+        Returns {} if there are no recent Codex calls via Piebald.
         """
         rows = self.get_headers_matching("x-codex-%")
         if not rows:
@@ -136,8 +136,8 @@ class PiebaldDB:
 
     def discover_ratelimit_headers(self) -> list[str]:
         """
-        Descobre todos os headers de response que parecem ser rate-limit,
-        de qualquer provider, nas últimas 48h.
+        Discovers all response headers that look like rate-limit headers,
+        from any provider, in the last 48 hours.
         """
         sql = """
             SELECT DISTINCT lower(hh.name)
@@ -161,8 +161,8 @@ class PiebaldDB:
 
     def get_settings(self, keys: list[str] | None = None) -> dict:
         """
-        Lê a tabela settings. Se keys fornecidas, filtra por elas.
-        Usar PiebaldDB(static=True) para leitura de config.
+        Reads the settings table. If keys are provided, filters by them.
+        Use PiebaldDB(static=True) for config reads.
         """
         if keys:
             placeholders = ",".join("?" * len(keys))
@@ -175,19 +175,19 @@ class PiebaldDB:
         return dict(rows)
 
     def get_providers(self) -> list[dict]:
-        """Lista os providers configurados."""
+        """Lists the configured providers."""
         with self._conn() as conn:
             rows = conn.execute(
                 "SELECT id, name, provider_type FROM providers ORDER BY id"
             ).fetchall()
         return [{"id": r[0], "name": r[1], "type": r[2]} for r in rows]
 
-    # ── Chats/mensagens (para wake injection) ─────────────────────────────────
+    # ── Chats/messages (for wake injection) ───────────────────────────────────
 
     def get_active_chat_id(self) -> Optional[int]:
         """
-        Retorna o ID do chat ativo mais recente (não deletado, não subagente).
-        Retorna None se nenhum chat encontrado.
+        Returns the ID of the most recent active chat (not deleted, not a subagent).
+        Returns None if no chat is found.
         """
         sql = """
             SELECT id FROM chats
@@ -202,8 +202,8 @@ class PiebaldDB:
 
     def get_last_message_id(self, chat_id: int) -> Optional[int]:
         """
-        Retorna o MAX(id) de messages WHERE parent_chat_id = chat_id.
-        Retorna None se o chat não tem mensagens (novo chat).
+        Returns the MAX(id) from messages WHERE parent_chat_id = chat_id.
+        Returns None if the chat has no messages (new chat).
         """
         sql = "SELECT MAX(id) FROM messages WHERE parent_chat_id = ?"
         with self._conn() as conn:
@@ -211,7 +211,7 @@ class PiebaldDB:
         return int(row[0]) if row and row[0] is not None else None
 
     def get_recent_chats(self, limit: int = 10) -> list[dict]:
-        """Lista chats recentes com last_message_id resolvido."""
+        """Lists recent chats with last_message_id resolved."""
         sql = """
             SELECT
               c.id, c.title, c.last_activity_at,
@@ -232,7 +232,7 @@ class PiebaldDB:
     # ── Traffic stats ──────────────────────────────────────────────────────────
 
     def traffic_by_provider(self, hours: int = 24) -> list[dict]:
-        """Distribuição de chamadas de chat_message por provider."""
+        """Distribution of chat_message calls by provider."""
         sql = """
             SELECT
               CASE
@@ -240,7 +240,7 @@ class PiebaldDB:
                 WHEN url LIKE '%openai.com%'            THEN 'codex'
                 WHEN url LIKE '%daily-cloudcode-pa%'    THEN 'agy'
                 WHEN url LIKE '%googleapis.com%'        THEN 'gemini'
-                ELSE 'outros'
+                ELSE 'other'
               END AS provider,
               COUNT(*) AS calls,
               ROUND(AVG(resp.response_time_ms)) AS avg_ms,
@@ -262,11 +262,11 @@ class PiebaldDB:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Helpers de formatação
+# Formatting helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _rel_epoch(epoch_str: str) -> str:
-    """Converte epoch string → 'in Xh Ym' ou '(passed)'."""
+    """Converts an epoch string → 'in Xh Ym' or '(passed)'."""
     try:
         delta = int(epoch_str) - int(time.time())
         if delta <= 0:
@@ -281,7 +281,7 @@ def _rel_epoch(epoch_str: str) -> str:
 
 
 def _rel_secs(secs_str: str) -> str:
-    """Converte string de segundos → 'Xh Ym' ou 'Xd Yh'."""
+    """Converts a seconds string → 'Xh Ym' or 'Xd Yh'."""
     try:
         s = int(secs_str)
         if s < 3600:
@@ -294,7 +294,7 @@ def _rel_secs(secs_str: str) -> str:
 
 
 def _pct(val_str: str) -> str:
-    """Converte float 0..1 string → 'XX.X%'."""
+    """Converts a 0..1 float string → 'XX.X%'."""
     try:
         return f"{float(val_str)*100:.1f}%"
     except (ValueError, TypeError):
@@ -314,18 +314,18 @@ except ImportError:
 
 class PiebaldWS:
     """
-    Cliente para o WebSocket do piebald-web.exe.
+    Client for the piebald-web.exe WebSocket.
 
     Endpoint: ws://127.0.0.1:<port>/api/ws?token=<TOKEN>
-    Token rotaciona a cada relaunch do piebald-web.exe.
-    NUNCA imprimir ou logar o token.
+    Token rotates on every piebald-web.exe relaunch.
+    NEVER print or log the token.
 
-    Exit semantics quando usado via CLI:
-      0 = sucesso
-      2 = token/text faltando
-      3 = auth rejeitado (token stale)
-      4 = comando rejeitado pelo server
-      5 = chat não encontrado
+    Exit semantics when used via CLI:
+      0 = success
+      2 = token/text missing
+      3 = auth rejected (stale token)
+      4 = command rejected by server
+      5 = chat not found
     """
 
     def __init__(self, token: str, port: int = DEFAULT_PORT, timeout: int = 15):
@@ -340,8 +340,8 @@ class PiebaldWS:
     def _build_frame(self, cmd_id: int, chat_id: int, text: str,
                      parent_message_id: Optional[int]) -> dict:
         """
-        Constrói o frame send_message_streaming.
-        Schema capturado ao vivo em 2026-06-02 — não simplificar a estrutura aninhada.
+        Builds the send_message_streaming frame.
+        Schema captured live 2026-06-02 — do not flatten the nested structure.
         """
         request = {
             "chat_id": chat_id,
@@ -358,7 +358,7 @@ class PiebaldWS:
                     }
                 }
             ],
-            "branching_intended": False,  # SEMPRE False para wake autônomo
+            "branching_intended": False,  # ALWAYS False for autonomous wake
         }
         if parent_message_id is not None:
             request["parent_message_id"] = parent_message_id
@@ -367,7 +367,7 @@ class PiebaldWS:
 
     async def _send_message(self, chat_id: int, text: str,
                              parent_message_id: Optional[int]) -> None:
-        """Conecta, autentica, envia o frame e aguarda a response."""
+        """Connects, authenticates, sends the frame, and waits for the response."""
         deadline = time.monotonic() + self.timeout
         cmd_id   = int(time.time() * 1000) % 1_000_000
         frame    = self._build_frame(cmd_id, chat_id, text, parent_message_id)
@@ -390,12 +390,12 @@ class PiebaldWS:
                 if msg.get("msg") == "web_access_required":
                     print("ERROR: auth rejected — token stale/invalid", file=sys.stderr)
                     sys.exit(3)
-                # outros push events antes do granted → ignorar
+                # other push events before granted → ignore
 
-            # ── Envio ─────────────────────────────────────────────────────────
+            # ── Send ──────────────────────────────────────────────────────────
             await ws.send(json.dumps(frame))
 
-            # ── Aguarda response ──────────────────────────────────────────────
+            # ── Wait for response ─────────────────────────────────────────────
             while True:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
@@ -414,13 +414,13 @@ class PiebaldWS:
                     err = msg.get("error", "(no error field)")
                     print(f"ERROR: server rejected command: {err}", file=sys.stderr)
                     sys.exit(4)
-                # outros frames → ignorar
+                # other frames → ignore
 
     def inject(self, chat_id: int, text: str,
                parent_message_id: Optional[int] = None) -> None:
         """
-        Injeta uma mensagem no chat e dispara um novo turno.
-        Sincrono — bloqueia até completar ou timeout.
+        Injects a message into the chat and triggers a new model turn.
+        Synchronous — blocks until complete or timeout.
         """
         asyncio.run(self._send_message(chat_id, text, parent_message_id))
 
@@ -430,7 +430,7 @@ class PiebaldWS:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def cmd_quota(args):
-    """Exibe painel de quota de Claude e Codex."""
+    """Displays the Claude and Codex quota dashboard."""
     db = PiebaldDB(args.db)
 
     print("════════════════════════════════════════════════════════════")
@@ -441,7 +441,7 @@ def cmd_quota(args):
     print("\n  ┌─ CLAUDE ──────────────────────────────────────────────┐")
     c = db.quota_claude()
     if not c:
-        print("  │  (sem chamadas Claude recentes via Piebald)")
+        print("  │  (no recent Claude calls via Piebald)")
     else:
         u5 = _pct(c.get("5h-utilization", ""))
         s5 = c.get("5h-status", "?")
@@ -461,7 +461,7 @@ def cmd_quota(args):
     print("\n  ┌─ CODEX ───────────────────────────────────────────────┐")
     cx = db.quota_codex()
     if not cx:
-        print("  │  (sem chamadas Codex recentes via Piebald)")
+        print("  │  (no recent Codex calls via Piebald)")
     else:
         pa  = _rel_epoch(cx.get("primary-reset-at", ""))
         ps  = _rel_secs(cx.get("primary-reset-after-seconds", ""))
@@ -483,13 +483,13 @@ def cmd_quota(args):
     extra = [h for h in new_headers
              if not any(h.startswith(k) for k in ["anthropic-ratelimit", "x-codex-"])]
     if extra:
-        print(f"\n  ℹ️  Outros headers de rate-limit detectados (novos providers?):")
+        print(f"\n  ℹ️  Additional rate-limit headers detected (new providers?):")
         for h in extra:
             print(f"      {h}")
 
 
 def cmd_info(args):
-    """Exibe config, providers e chat ativo."""
+    """Displays config, providers, and active chat."""
     db_static = PiebaldDB(args.db, static=True)
     db_live   = PiebaldDB(args.db)
 
@@ -509,22 +509,22 @@ def cmd_info(args):
     for p in providers:
         print(f"  id={p['id']}  {p['name']}  [{p['type']}]")
 
-    print("\n=== Chats recentes (top 5) ===")
+    print("\n=== Recent chats (top 5) ===")
     for c in chats:
-        title = (c["title"] or "(sem título)")[:50]
+        title = (c["title"] or "(no title)")[:50]
         print(f"  id={c['id']}  last_msg={c['last_message_id']}  {title}")
-        print(f"      última atividade: {c['last_activity_at']}")
+        print(f"      last activity: {c['last_activity_at']}")
 
-    print("\n=== Traffic últimas 24h (chat_message) ===")
+    print("\n=== Traffic last 24h (chat_message) ===")
     for t in traffic:
         print(f"  {t['provider']:<12}  calls={t['calls']}  avg={t['avg_ms']}ms  errors={t['errors']}")
 
 
 def cmd_inject(args):
-    """Injeta uma mensagem no chat ativo (ou --chat-id)."""
+    """Injects a message into the active chat (or --chat-id)."""
     token = args.token or os.environ.get("PIEBALD_WEB_TOKEN")
     if not token:
-        print("ERROR: fornecer --token ou PIEBALD_WEB_TOKEN", file=sys.stderr)
+        print("ERROR: provide --token or PIEBALD_WEB_TOKEN", file=sys.stderr)
         sys.exit(2)
 
     db = PiebaldDB(args.db)
@@ -533,9 +533,9 @@ def cmd_inject(args):
     if chat_id is None:
         chat_id = db.get_active_chat_id()
         if chat_id is None:
-            print("ERROR: nenhum chat ativo encontrado", file=sys.stderr)
+            print("ERROR: no active chat found", file=sys.stderr)
             sys.exit(5)
-        print(f"Chat ativo: {chat_id}")
+        print(f"Active chat: {chat_id}")
 
     parent_message_id = db.get_last_message_id(chat_id)
     print(f"parent_message_id: {parent_message_id}")
@@ -549,23 +549,23 @@ def cmd_inject(args):
 
     ws = PiebaldWS(token, port=args.port, timeout=args.timeout)
     ws.inject(chat_id, args.text, parent_message_id)
-    print(f"OK: mensagem injetada — chat_id={chat_id}  parent_message_id={parent_message_id}")
+    print(f"OK: message injected — chat_id={chat_id}  parent_message_id={parent_message_id}")
 
 
 def main():
-    p = argparse.ArgumentParser(description="Cliente Python para Piebald app.db + WebSocket")
-    p.add_argument("--db", default=DEFAULT_DB, help="Caminho para app.db")
+    p = argparse.ArgumentParser(description="Python client for Piebald app.db + WebSocket")
+    p.add_argument("--db", default=DEFAULT_DB, help="Path to app.db")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     # quota
-    sub.add_parser("quota", help="Exibe painel de quota de Claude e Codex")
+    sub.add_parser("quota", help="Display Claude and Codex quota dashboard")
 
     # info
-    sub.add_parser("info", help="Exibe config, providers e chats recentes")
+    sub.add_parser("info", help="Display config, providers, and recent chats")
 
     # inject
-    inj = sub.add_parser("inject", help="Injeta mensagem no chat ativo")
-    inj.add_argument("text", help="Corpo da mensagem")
+    inj = sub.add_parser("inject", help="Inject a message into the active chat")
+    inj.add_argument("text", help="Message body")
     inj.add_argument("--token",     default=None)
     inj.add_argument("--chat-id",   type=int, default=None)
     inj.add_argument("--port",      type=int, default=DEFAULT_PORT)

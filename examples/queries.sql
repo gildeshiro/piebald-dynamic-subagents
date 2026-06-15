@@ -1,13 +1,13 @@
--- queries.sql — Referência de queries para Piebald app.db
--- Arquivo: C:/Users/<you>/AppData/Roaming/Piebald/app.db
+-- queries.sql — Reference queries for Piebald app.db
+-- File: C:/Users/<you>/AppData/Roaming/Piebald/app.db
 --
--- SEMPRE abrir como: file:<path>?mode=ro
--- NUNCA usar immutable=1 para dados ao vivo (quota, requests recentes)
--- immutable=1 é OK para settings/providers (tabelas estáticas de config)
+-- ALWAYS open as: file:<path>?mode=ro
+-- NEVER use immutable=1 for live data (quota, recent requests)
+-- immutable=1 is OK for settings/providers (static config tables)
 --
--- Executar via sqlite3:
+-- Run via sqlite3:
 --   sqlite3 "file:C:/Users/<you>/AppData/Roaming/Piebald/app.db?mode=ro" < queries.sql
--- Ou em Python:
+-- Or in Python:
 --   conn = sqlite3.connect("file:C:/Users/<you>/AppData/Roaming/Piebald/app.db?mode=ro", uri=True)
 
 
@@ -15,7 +15,7 @@
 -- QUOTA / RATE-LIMIT — Claude (Anthropic)
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- Último valor de cada header Claude de quota
+-- Latest value of each Claude quota header
 SELECT lower(hh.name) AS header, hh.value, r.created_at AS as_of
 FROM http_headers hh
 JOIN http_requests r ON r.id = hh.http_request_id
@@ -31,7 +31,7 @@ WHERE hh.is_request = 0
   )
 ORDER BY hh.header_index;
 
--- Só o 5h-utilization (mais comum — float 0..1)
+-- Only the 5h-utilization (most common — float 0..1)
 SELECT hh.value AS utilization_5h, r.created_at AS as_of
 FROM http_headers hh
 JOIN http_requests r ON r.id = hh.http_request_id
@@ -40,7 +40,7 @@ WHERE hh.is_request = 0
 ORDER BY r.created_at DESC
 LIMIT 1;
 
--- Painel completo Claude: 5h + 7d + sonnet em uma query
+-- Full Claude dashboard: 5h + 7d + sonnet in one query
 SELECT
   MAX(CASE WHEN lower(hh.name) = 'anthropic-ratelimit-unified-5h-utilization'    THEN hh.value END) AS util_5h,
   MAX(CASE WHEN lower(hh.name) = 'anthropic-ratelimit-unified-5h-status'         THEN hh.value END) AS status_5h,
@@ -67,7 +67,7 @@ WHERE hh.is_request = 0
 -- QUOTA / RATE-LIMIT — Codex (OpenAI)
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- Último valor de cada header Codex de quota
+-- Latest value of each Codex quota header
 SELECT lower(hh.name) AS header, hh.value, r.created_at AS as_of
 FROM http_headers hh
 JOIN http_requests r ON r.id = hh.http_request_id
@@ -83,7 +83,7 @@ WHERE hh.is_request = 0
   )
 ORDER BY hh.header_index;
 
--- Painel completo Codex em uma query
+-- Full Codex dashboard in one query
 SELECT
   MAX(CASE WHEN lower(hh.name) = 'x-codex-primary-reset-at'                      THEN hh.value END) AS primary_reset_at_epoch,
   MAX(CASE WHEN lower(hh.name) = 'x-codex-primary-reset-after-seconds'            THEN hh.value END) AS primary_reset_secs,
@@ -106,10 +106,10 @@ WHERE hh.is_request = 0
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- DISCOVERY — Que headers de rate-limit existem (qualquer provider)
+-- DISCOVERY — Which rate-limit headers exist (any provider)
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- Todos os nomes de header de response únicos nas últimas 48h
+-- All unique response header names in the last 48h
 SELECT DISTINCT lower(hh.name) AS header_name, COUNT(*) AS occurrences
 FROM http_headers hh
 JOIN http_requests r ON r.id = hh.http_request_id
@@ -119,7 +119,7 @@ GROUP BY lower(hh.name)
 ORDER BY occurrences DESC
 LIMIT 50;
 
--- Headers que parecem ser rate-limit (qualquer provider, auto-discovery)
+-- Headers that look like rate-limit (any provider, auto-discovery)
 SELECT DISTINCT lower(hh.name) AS header_name
 FROM http_headers hh
 WHERE hh.is_request = 0
@@ -133,7 +133,7 @@ WHERE hh.is_request = 0
   )
 ORDER BY 1;
 
--- Headers Gemini/Google (descoberta — pode não ter rate-limit mas vale verificar)
+-- Gemini/Google headers (discovery — may not have rate-limit but worth checking)
 SELECT DISTINCT lower(hh.name) AS header_name, COUNT(*) AS n
 FROM http_headers hh
 JOIN http_requests r ON r.id = hh.http_request_id
@@ -144,24 +144,24 @@ ORDER BY n DESC;
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- HTTP TRAFFIC — Análise geral
+-- HTTP TRAFFIC — General analysis
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- Distribuição por request_type (últimas 24h)
+-- Distribution by request_type (last 24h)
 SELECT request_type, COUNT(*) AS total
 FROM http_requests
 WHERE created_at > datetime('now', '-24 hours')
 GROUP BY request_type
 ORDER BY total DESC;
 
--- Distribuição por provider via URL pattern
+-- Distribution by provider via URL pattern
 SELECT
   CASE
     WHEN url LIKE '%anthropic.com%'                        THEN 'claude'
     WHEN url LIKE '%openai.com%'                           THEN 'codex'
     WHEN url LIKE '%daily-cloudcode-pa%'                   THEN 'agy'
     WHEN url LIKE '%googleapis.com%'                       THEN 'gemini'
-    ELSE 'outros'
+    ELSE 'other'
   END AS provider,
   request_type,
   COUNT(*) AS total,
@@ -173,7 +173,7 @@ WHERE r.created_at > datetime('now', '-24 hours')
 GROUP BY provider, request_type
 ORDER BY total DESC;
 
--- Chamadas recentes com erros (status >= 400)
+-- Recent calls with errors (status >= 400)
 SELECT r.id, r.request_type, r.url, resp.status_code, resp.response_time_ms, r.created_at
 FROM http_requests r
 JOIN http_responses resp ON resp.http_request_id = r.id
@@ -182,13 +182,13 @@ WHERE resp.status_code >= 400
 ORDER BY r.created_at DESC
 LIMIT 20;
 
--- Latência média por provider (últimas 6h)
+-- Average latency by provider (last 6h)
 SELECT
   CASE
     WHEN url LIKE '%anthropic.com%'        THEN 'claude'
     WHEN url LIKE '%openai.com%'           THEN 'codex'
     WHEN url LIKE '%googleapis.com%'       THEN 'google'
-    ELSE 'outros'
+    ELSE 'other'
   END AS provider,
   COUNT(*) AS calls,
   ROUND(AVG(resp.response_time_ms)) AS avg_ms,
@@ -200,7 +200,7 @@ WHERE r.request_type = 'chat_message'
   AND r.created_at > datetime('now', '-6 hours')
 GROUP BY provider;
 
--- Volume de MCP requests por server (URL)
+-- MCP request volume by server (URL)
 SELECT r.url, COUNT(*) AS calls, AVG(resp.response_time_ms) AS avg_ms
 FROM http_requests r
 JOIN http_responses resp ON resp.http_request_id = r.id
@@ -211,11 +211,11 @@ ORDER BY calls DESC;
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- CONFIG — Leitura estática (pode usar immutable=1 aqui)
--- Abrir com: file:<path>?mode=ro&immutable=1
+-- CONFIG — Static read (can use immutable=1 here)
+-- Open with: file:<path>?mode=ro&immutable=1
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- Settings relevantes
+-- Relevant settings
 SELECT key, value FROM settings
 WHERE key IN (
   'subagent_model',
@@ -225,18 +225,18 @@ WHERE key IN (
   'default_permission_mode'
 );
 
--- Providers configurados
+-- Configured providers
 SELECT id, name, provider_type FROM providers ORDER BY id;
 
--- Modelos customizados
+-- Custom models
 SELECT * FROM provider_custom_models;
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- CHATS / MENSAGENS — Para wake injection
+-- CHATS / MESSAGES — For wake injection
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- Chat ativo mais recente (não deletado, não subagente)
+-- Most recent active chat (not deleted, not a subagent)
 SELECT id, title, last_activity_at
 FROM chats
 WHERE is_deleted = 0
@@ -244,13 +244,13 @@ WHERE is_deleted = 0
 ORDER BY last_activity_at DESC
 LIMIT 5;
 
--- Último message_id de um chat específico (para parent_message_id)
--- Substituir <CHAT_ID> pelo ID real
+-- Last message_id in a specific chat (for parent_message_id)
+-- Replace <CHAT_ID> with the real ID
 SELECT MAX(id) AS last_message_id
 FROM messages
 WHERE parent_chat_id = 21; -- <CHAT_ID>
 
--- Resumo: chat_id + last_message_id + título (para escolher alvo de wake)
+-- Summary: chat_id + last_message_id + title (to choose a wake target)
 SELECT
   c.id AS chat_id,
   c.title,
@@ -264,10 +264,10 @@ LIMIT 10;
 
 
 -- ═══════════════════════════════════════════════════════════════════════════
--- DIAGNÓSTICO — Saúde do banco
+-- DIAGNOSTICS — Database health
 -- ═══════════════════════════════════════════════════════════════════════════
 
--- Número de requests por dia nos últimos 7 dias
+-- Number of requests per day in the last 7 days
 SELECT
   date(created_at) AS day,
   COUNT(*) AS total_requests,
@@ -277,11 +277,11 @@ WHERE created_at > datetime('now', '-7 days')
 GROUP BY date(created_at)
 ORDER BY day DESC;
 
--- Janela efetiva de retenção (timestamp mais antigo no banco)
+-- Effective retention window (oldest timestamp in the database)
 SELECT MIN(created_at) AS oldest_record, MAX(created_at) AS newest_record
 FROM http_requests;
 
--- Tabelas maiores (contagem de rows)
+-- Largest tables (row counts)
 SELECT 'http_requests'       AS tbl, COUNT(*) AS rows FROM http_requests
 UNION ALL
 SELECT 'http_responses',              COUNT(*) FROM http_responses

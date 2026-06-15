@@ -1,10 +1,10 @@
 {
   "_meta": {
     "generated": "2026-06-10T23:25:13.315Z",
-    "source": "refresh_provider_models (ao vivo)",
+    "source": "refresh_provider_models (live)",
     "regenerate": "node control-plane/discover-models.mjs",
-    "reasoning_note": "No esquema Piebald, reasoning de TODOS os engines é controlado pelo PROFILE (o generation_config do profile guarda anthropic.effort + openai.reasoning_effort + google.thinking_budget juntos). Selecionar profile = selecionar reasoning. É o único lever de reasoning no nosso setup.",
-    "status_semantics": "status 'ok' = o provider LISTA modelos. NÃO garante que um worker roda de fato (auth/quirk de chat-time). Validar com control-plane/probe.mjs.",
+    "reasoning_note": "In the Piebald schema, reasoning for ALL engines is controlled by the PROFILE (the profile's generation_config stores anthropic.effort + openai.reasoning_effort + google.thinking_budget together). Selecting a profile = selecting reasoning. It is the only reasoning lever in our setup.",
+    "status_semantics": "status 'ok' = the provider LISTS models. Does NOT guarantee that a worker actually runs (auth/chat-time quirks). Validate with control-plane/probe.mjs.",
     "openai_reasoning_levels": [
       "low",
       "medium",

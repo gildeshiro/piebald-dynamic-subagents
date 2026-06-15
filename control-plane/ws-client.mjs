@@ -1,17 +1,17 @@
 #!/usr/bin/env node
-// ws-client.mjs — cliente WS do Piebald + leitura de resultado via app.db.
-// Fundação da Fase 1 (1.0 token-bootstrap + 1a transporte/shapes). Node 24+
-// (WebSocket global nativo). NUNCA commitar token.
+// ws-client.mjs — Piebald WS client + result reading via app.db.
+// Foundation for Phase 1 (1.0 token-bootstrap + 1a transport/shapes). Node 24+
+// (native global WebSocket). NEVER commit the token.
 //
-// Token (Fase 1.0): env PIEBALD_WEB_TOKEN ou --token. Sem ele -> falha rápida
-// com instrução. (Sem as fontes mágicas; o token rotaciona por launch do
-// piebald-web e só aparece na URL da Web UI.)
+// Token (Phase 1.0): env PIEBALD_WEB_TOKEN or --token. Without it -> fast fail
+// with instructions. (No magic sources; the token rotates per piebald-web launch
+// and only appears in the Web UI URL.)
 //
 // CLI:
-//   PIEBALD_WEB_TOKEN=... node ws-client.mjs smoke         # round-trip no-op (create->read->delete)
+//   PIEBALD_WEB_TOKEN=... node ws-client.mjs smoke         # no-op round-trip (create->read->delete)
 //   PIEBALD_WEB_TOKEN=... node ws-client.mjs providers     # list_providers
 //   PIEBALD_WEB_TOKEN=... node ws-client.mjs profiles       # list_profiles
-//   node ws-client.mjs read <chatId>                        # le resultado do app.db (sem token)
+//   node ws-client.mjs read <chatId>                        # read result from app.db (no token needed)
 
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
@@ -27,15 +27,15 @@ export function getToken(argv = process.argv) {
   const tok = (i !== -1 && argv[i + 1]) || process.env.PIEBALD_WEB_TOKEN;
   if (!tok) {
     throw new Error(
-      "Token ausente. Defina PIEBALD_WEB_TOKEN (ou --token <TOK>).\n" +
-      "Como obter: abra a Web UI do Piebald e copie o `?token=` da URL " +
-      "(http://127.0.0.1:7000/?token=XXXX). O token rotaciona a cada relançamento do piebald-web."
+      "Token missing. Set PIEBALD_WEB_TOKEN (or --token <TOK>).\n" +
+      "How to get it: open the Piebald Web UI and copy the `?token=` from the URL " +
+      "(http://127.0.0.1:7000/?token=XXXX). The token rotates on every piebald-web relaunch."
     );
   }
   return tok;
 }
 
-// ---------- Cliente WS (1a) ----------
+// ---------- WS Client (1a) ----------
 export class PiebaldWS {
   constructor(token, { port = PORT } = {}) {
     this.url = `ws://127.0.0.1:${port}/api/ws?token=${token}`;
@@ -48,17 +48,17 @@ export class PiebaldWS {
 
   connect({ timeoutMs = 8000, waitReadyMs = 12000 } = {}) {
     return new Promise((resolve, reject) => {
-      const to = setTimeout(() => reject(new Error("connect timeout (sem web_access_granted)")), timeoutMs);
+      const to = setTimeout(() => reject(new Error("connect timeout (no web_access_granted received)")), timeoutMs);
       this.ws = new WebSocket(this.url);
       this.ws.addEventListener("message", (ev) => this._onMessage(ev));
       this.ws.addEventListener("error", (e) => { if (!this.granted) { clearTimeout(to); reject(new Error("WS error: " + (e.message || e))); } });
       this.ws.addEventListener("close", () => {
-        for (const [, p] of this._pending) { clearTimeout(p.timer); p.reject(new Error("WS fechou")); }
+        for (const [, p] of this._pending) { clearTimeout(p.timer); p.reject(new Error("WS closed")); }
         this._pending.clear();
       });
-      // Gate de readiness: o piebald-web tem warm-up async — logo após o granted,
-      // comandos podem falhar com "No subscription information available" até a
-      // assinatura carregar. Esperamos ela ficar pronta antes de resolver.
+      // Readiness gate: piebald-web has async warm-up — immediately after granted,
+      // commands may fail with "No subscription information available" until the
+      // subscription loads. Wait for it to be ready before resolving.
       this._onGranted = async () => {
         clearTimeout(to);
         const t0 = Date.now();
@@ -68,11 +68,11 @@ export class PiebaldWS {
             if (/subscription information/i.test(e.message) && Date.now() - t0 < waitReadyMs) {
               await new Promise((r) => setTimeout(r, 500)); continue;
             }
-            return resolve(this); // outro erro: segue (nao bloqueia comandos independentes de subscription)
+            return resolve(this); // other error: proceed (doesn't block subscription-independent commands)
           }
         }
       };
-      this._onRejected = () => { clearTimeout(to); reject(new Error("AUTH REJEITADO: token inválido/expirado (rotacionou?). Reobtenha da Web UI.")); };
+      this._onRejected = () => { clearTimeout(to); reject(new Error("AUTH REJECTED: invalid/expired token (rotated?). Re-obtain it from the Web UI.")); };
     });
   }
 
@@ -85,7 +85,7 @@ export class PiebaldWS {
       if (!p) return;
       clearTimeout(p.timer); this._pending.delete(m.id);
       if (m.success) p.resolve(m.response);
-      else p.reject(new Error(`comando falhou: ${m.error}`));
+      else p.reject(new Error(`command failed: ${m.error}`));
       return;
     }
     if (m.msg === "event") {
@@ -94,12 +94,12 @@ export class PiebaldWS {
     }
   }
 
-  // call com timeout explícito + correlação de id (suporta múltiplos pendentes)
+  // call with explicit timeout + id correlation (supports multiple pending calls)
   call(name, request = {}, { timeoutMs = 15000 } = {}) {
-    if (!this.granted) return Promise.reject(new Error("não autenticado (chame connect primeiro)"));
+    if (!this.granted) return Promise.reject(new Error("not authenticated (call connect first)"));
     const id = ++this._id;
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { this._pending.delete(id); reject(new Error(`timeout em '${name}' (${timeoutMs}ms)`)); }, timeoutMs);
+      const timer = setTimeout(() => { this._pending.delete(id); reject(new Error(`timeout in '${name}' (${timeoutMs}ms)`)); }, timeoutMs);
       this._pending.set(id, { resolve, reject, timer });
       this.ws.send(JSON.stringify({ msg: "command", id, name, request }));
     });
@@ -113,7 +113,7 @@ export class PiebaldWS {
 
   close() { try { this.ws?.close(); } catch {} }
 
-  // -------- wrappers de comando (shapes confirmados) --------
+  // -------- command wrappers (confirmed shapes) --------
   listProviders() { return this.call("list_providers"); }
   listProfiles() { return this.call("list_profiles"); }
   listChats() { return this.call("list_chats"); }
@@ -135,7 +135,7 @@ export class PiebaldWS {
 
   changeChatProfile(chat_id, profile_id) { return this.call("change_chat_profile", { chat_id, profile_id, force: true }); }
 
-  // shape REAL do parts (árvore de nodes) — NÃO texto plano
+  // REAL shape of parts (node tree) — NOT plain text
   sendMessage(chat_id, content, { parent_message_id } = {}) {
     const req = {
       chat_id,
@@ -149,9 +149,9 @@ export class PiebaldWS {
   deleteChat(chat_id) { return this.call("delete_chat", { chat_id }); }
 }
 
-// ---------- Leitura de resultado via app.db (1a, PROVADO) ----------
+// ---------- Result reading via app.db (1a, PROVEN) ----------
 function sql(query) {
-  if (!existsSync(DB_PATH)) throw new Error("app.db não encontrado em " + DB_PATH);
+  if (!existsSync(DB_PATH)) throw new Error("app.db not found at " + DB_PATH);
   return execFileSync("sqlite3", [DB_PATH, query], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }).trim();
 }
 
@@ -159,7 +159,7 @@ export function chatStatus(chatId) {
   return sql(`SELECT working_status FROM chats WHERE id=${Number(chatId)};`);
 }
 
-// texto final do assistant (sem thinking), concatenado em ordem
+// final text from the assistant (excluding thinking), concatenated in order
 export function lastAssistantText(chatId) {
   const id = Number(chatId);
   return sql(`SELECT group_concat(content,'') FROM (
@@ -174,13 +174,13 @@ export function lastAssistantText(chatId) {
     ORDER BY mp.part_index, mcn.node_index);`);
 }
 
-// status final do último assistant (pra distinguir done vs error)
+// final status of the last assistant (to distinguish done vs error)
 export function lastAssistantStatus(chatId) {
   return sql(`SELECT status FROM messages WHERE parent_chat_id=${Number(chatId)} AND role='assistant' ORDER BY id DESC LIMIT 1;`);
 }
 
-// tool calls AINDA não resolvidas (pending/executing) e as DENIED do último
-// assistant — sinal de que o worker pausou esperando execução/aprovação.
+// tool calls NOT yet resolved (pending/executing) and DENIED ones from the last
+// assistant — signals that the worker paused waiting for execution/approval.
 export function pendingToolCalls(chatId) {
   const id = Number(chatId);
   const out = sql(`SELECT mptc.tool_name || ':' || mptc.tool_state
@@ -193,16 +193,16 @@ export function pendingToolCalls(chatId) {
   return out ? out.split("\n").filter(Boolean) : [];
 }
 
-// Máquina de estados real do working_status (descoberta no app.db 2026-06-13):
-//   PROGRESS = working/backlog (avançando de verdade)
-//   DONE     = done/finished/idle (terminal; sucesso só se houver texto e sem erro)
-//   FAIL     = error/abandoned (terminal de falha)
-//   waiting_tool_call = PAUSADO esperando tool. Normalmente TRANSITÓRIO (a tool
-//     executa e segue), mas pode TRAVAR (tool pendente sem executor/aprovação —
-//     ex.: worker que auto-disparou brainstorming -> TodoWrite/retrieve_tools
-//     pendentes). Por isso: timeout SECUNDÁRIO (stuckToolMs) só pra esse estado.
-//   Retornos: completed | error | paused_tool_call | no_text (assistant terminou
-//     mas só produziu tool_call, zero texto -> NÃO é sucesso silencioso).
+// Real working_status state machine (discovered in app.db 2026-06-13):
+//   PROGRESS = working/backlog (genuinely advancing)
+//   DONE     = done/finished/idle (terminal; success only if there is text and no error)
+//   FAIL     = error/abandoned (failure terminal)
+//   waiting_tool_call = PAUSED waiting for a tool. Normally TRANSIENT (the tool
+//     executes and continues), but can FREEZE (pending tool with no executor/approval —
+//     e.g. a worker that auto-triggered brainstorming -> TodoWrite/retrieve_tools
+//     pending). Hence: secondary timeout (stuckToolMs) for this state only.
+//   Return values: completed | error | paused_tool_call | no_text (assistant finished
+//     but produced only tool_call, zero text -> NOT a silent success).
 const PROGRESS = new Set(["working", "backlog"]);
 const DONE = new Set(["done", "finished", "idle"]);
 const FAIL = new Set(["error", "abandoned"]);
@@ -218,24 +218,23 @@ export async function readResult(chatId, { timeoutMs = 180000, pollMs = 2500, st
     }
     if (ws === "waiting_tool_call") {
       if (!waitingSince) waitingSince = Date.now();
-      if (Date.now() - waitingSince > stuckToolMs) { // preso em tool: pausa, não trava
+      if (Date.now() - waitingSince > stuckToolMs) { // stuck in tool: pause, don't freeze
         return { status: "paused_tool_call", working_status: ws, text: lastAssistantText(chatId), pendingTools: pendingToolCalls(chatId), ms: Date.now() - t0 };
       }
     } else {
-      waitingSince = 0; // saiu do waiting -> resetar o relógio de "preso"
+      waitingSince = 0; // exited waiting -> reset the "stuck" clock
     }
-    const ast = lastAssistantStatus(chatId); // '' se ainda não há assistant
+    const ast = lastAssistantStatus(chatId); // '' if no assistant yet
     const settled = DONE.has(ws) && ast && !STREAMING.has(ast);
     if (settled) {
       if (ast === "error") return { status: "error", working_status: ws, text: lastAssistantText(chatId), pendingTools: pendingToolCalls(chatId), ms: Date.now() - t0 };
       const text = lastAssistantText(chatId);
       const tools = pendingToolCalls(chatId);
-      // assistant 'completed' mas só com tool_call e ZERO texto != sucesso real
+      // assistant 'completed' but only with tool_call and ZERO text != real success
       const status = text ? "completed" : (tools.length ? "no_text" : "completed");
       return { status, working_status: ws, text, pendingTools: tools, ms: Date.now() - t0 };
     }
-    if (Date.now() - t0 > timeoutMs) throw new Error(`readResult timeout (${timeoutMs}ms), working_status=${ws}, assistant=${ast || "—"}`);
-    await new Promise((r) => setTimeout(r, pollMs));
+    if (Date.now() - t0 > timeoutMs) throw new Error(`readResult timeout (${timeoutMs}ms), working_status=${ws}, assistant=${ast || "—"}`);    await new Promise((r) => setTimeout(r, pollMs));
   }
 }
 
@@ -259,11 +258,11 @@ if (isMain) {
         const id = await pb.createChat({ provider_id: 3, model: "claude-sonnet-4-6", current_directory: process.cwd(), title: "pbsub/smoke" });
         console.log("created chat", id, "status:", chatStatus(id));
         await pb.deleteChat(id);
-        await pb.deleteChat(id); // idempotência
+        await pb.deleteChat(id); // idempotency check
         console.log("deleted chat", id, "-> is_deleted:", sql(`SELECT is_deleted FROM chats WHERE id=${id};`));
       } else {
-        console.log("uso: smoke | providers | profiles | read <chatId>");
+        console.log("usage: smoke | providers | profiles | read <chatId>");
       }
     } finally { pb.close(); }
-  })().catch((e) => { console.error("ERRO:", e.message); process.exit(1); });
+  })().catch((e) => { console.error("ERROR:", e.message); process.exit(1); });
 }

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// profiles.mjs — cria/edita/remove profiles do Piebald via API legítima (WS).
-// NÃO hand-edita o SQLite (isso desync-aria o cache em memória do app). Editar
-// um profile FORKA o generation_config (copy-on-write) — o Default fica intacto.
+// profiles.mjs — creates/edits/removes Piebald profiles via the legitimate API (WS).
+// Does NOT hand-edit SQLite (that would desync the app's in-memory cache). Editing
+// a profile FORKS the generation_config (copy-on-write) — Default remains intact.
 //
-// Reasoning é por-engine, dentro do profile (override_patches):
+// Reasoning is per-engine, within the profile (override_patches):
 //   anthropic        -> { effort: "low|medium|high|max", thinking_mode? }
 //   openai_responses -> { reasoning_effort: "low|medium|high|xhigh" }
-//   google           -> { thinking_budget: <int> (-1 = dinâmico) }
+//   google           -> { thinking_budget: <int> (-1 = dynamic) }
 //
 // CLI:
 //   PIEBALD_WEB_TOKEN=... node control-plane/profiles.mjs list
@@ -22,7 +22,7 @@ export async function createProfile(pb, name) {
   return r.profile.id;
 }
 
-// monta o map override_patches a partir de um spec de effort por engine
+// builds the override_patches map from a per-engine effort spec
 export function buildOverridePatches({ anthropic_effort, thinking_mode, openai_reasoning_effort, google_thinking_budget } = {}) {
   const p = {};
   if (anthropic_effort || thinking_mode) {
@@ -33,7 +33,7 @@ export function buildOverridePatches({ anthropic_effort, thinking_mode, openai_r
   return p;
 }
 
-// aplica overrides (forka o config). Ignora se não há nada pra setar.
+// applies overrides (forks the config). No-op if there is nothing to set.
 export async function setProfileOverrides(pb, profile_id, spec) {
   const override_patches = buildOverridePatches(spec);
   if (!Object.keys(override_patches).length) return { success: true, noop: true };
@@ -42,7 +42,7 @@ export async function setProfileOverrides(pb, profile_id, spec) {
 
 export async function deleteProfile(pb, profile_id) { return pb.call("delete_profile", { profile_id }); }
 
-// cria-ou-reusa um profile com o reasoning desejado. Retorna profile_id.
+// creates-or-reuses a profile with the desired reasoning. Returns profile_id.
 export async function ensureProfile(pb, spec) {
   const { name } = spec;
   const existing = (await listProfiles(pb)).find((p) => p.name === name);
@@ -73,7 +73,7 @@ if (isMain) {
     } else if (cmd === "delete") {
       console.log(JSON.stringify(await deleteProfile(pb, Number(arg))));
     } else {
-      console.log("uso: list | ensure <name> [--anth ..] [--oai ..] [--google <int>] | delete <id>");
+      console.log("usage: list | ensure <name> [--anth ..] [--oai ..] [--google <int>] | delete <id>");
     }
   } finally { pb.close(); }
 }

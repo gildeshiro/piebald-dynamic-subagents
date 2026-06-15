@@ -38,6 +38,15 @@ Valid `provider`/`model` values live in `control-plane/catalog.json` (generated 
 `profile` points to a Piebald Profile (default provider/model + **reasoning
 effort** + system prompt) — it carries the persona + reasoning level.
 
+> **Safety (prefix-only + validated).** The directive is honored **only as a prefix**
+> (the leading token of the prompt). A directive that merely appears mid-prompt — in
+> an example, a quote, documentation being processed, or untrusted content — is
+> **ignored**, so handling text that mentions the tag can't hijack routing. Every
+> field is also **validated against `catalog.json`** before it is written; an unknown
+> or placeholder value (e.g. `model=<model-id>`) is **rejected** and the launch falls
+> back to the baseline (default brain) instead of poisoning the global route and
+> crashing subagent creation. See `test/pbroute-route.test.mjs`.
+
 ---
 
 ## Components

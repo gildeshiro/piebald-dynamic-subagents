@@ -23,6 +23,7 @@ const ROOT = path.join(__dir, "..");
 const LOG = path.join(__dir, "route.log");
 const TOKEN_FILE = path.join(ROOT, ".pbtoken");
 const BASELINE_FILE = path.join(ROOT, "control-plane", "pbroute-baseline.json");
+const CATALOG_FILE = path.join(ROOT, "control-plane", "catalog.json");
 const CURRENT_TOKEN = path.join(os.homedir(), ".piebald-remote", "current-token");
 const DB_PATH = process.env.PIEBALD_APP_DB ||
   path.join(process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming"), "Piebald", "app.db");
@@ -101,6 +102,45 @@ async function resetBaseline(tool, reason) {
   }
 }
 
+// ---- catalog-backed validation (fix B+C: invalid route -> reject, never crash) ----
+function isPlaceholder(v) { return v === "" || /^<.*>$/.test(v); }
+
+function loadCatalog() {
+  try {
+    const c = JSON.parse(readFileSync(CATALOG_FILE, "utf8"));
+    const providers = new Map();
+    const allModels = new Set();
+    for (const p of c.providers || []) {
+      const set = new Set((p.models || []).map((m) => String(m.id)));
+      providers.set(String(p.id), set);
+      for (const id of set) allModels.add(id);
+    }
+    const profiles = new Set((c.profiles || []).map((p) => String(p.id)));
+    return { providers, allModels, profiles };
+  } catch { return null; }
+}
+
+// returns null if the route is OK, or a string REASON if it must be rejected.
+// If the catalog can't be loaded we stay permissive (only the placeholder guard
+// applies) so a missing/stale catalog never disables routing outright — but a
+// literal placeholder like `<model-id>` is ALWAYS rejected (that was the crash).
+function validateRoute(updates, catalog) {
+  for (const [k, v] of Object.entries(updates)) {
+    if (isPlaceholder(v)) return `${k}='${v}' is a placeholder/empty`;
+  }
+  if (!catalog) return null;
+  if (updates.provider !== undefined && !catalog.providers.has(updates.provider))
+    return `unknown provider '${updates.provider}'`;
+  if (updates.model !== undefined) {
+    const set = updates.provider !== undefined ? catalog.providers.get(updates.provider) : null;
+    const known = set ? set.has(updates.model) : catalog.allModels.has(updates.model);
+    if (!known) return `unknown model '${updates.model}'${updates.provider ? ` for provider ${updates.provider}` : ""}`;
+  }
+  if (updates.profile !== undefined && !catalog.profiles.has(updates.profile))
+    return `unknown profile '${updates.profile}'`;
+  return null;
+}
+
 async function main() {
   let raw = ""; try { raw = readFileSync(0, "utf8"); } catch {}
   let ev = {}; try { ev = JSON.parse(raw); } catch {}
@@ -112,15 +152,35 @@ async function main() {
   const NATIVE_SUBAGENT_TOOLS = new Set(["Agent", "LaunchSubagent", "Task"]);
   if (!NATIVE_SUBAGENT_TOOLS.has(tool)) return;
 
-  const promptText = input.prompt || input.description || input.task || input.instructions ||
-    (typeof input === "string" ? input : JSON.stringify(input));
-  const m = String(promptText).match(/\[\[pbroute([^\]]*)\]\]/i);
-  if (!m) { await resetBaseline(tool, "pbroute absent"); return; }
+  const promptText = String(input.prompt || input.description || input.task || input.instructions ||
+    (typeof input === "string" ? input : JSON.stringify(input)));
+
+  // ANCHOR (fix A): the directive is a PREFIX by contract — only the LEADING token
+  // routes. A directive that merely appears mid-prompt (an example, a quote, doc
+  // text being processed, untrusted content) MUST NOT trigger routing. This closes
+  // the prompt-injection vector where any prompt that *mentions* the tag got routed.
+  const m = promptText.match(/^\s*\[\[pbroute([^\]]*)\]\]/i);
+  if (!m) {
+    if (/\[\[pbroute[^\]]*\]\]/i.test(promptText)) log("pbroute present mid-prompt (not a prefix) -> IGNORED");
+    await resetBaseline(tool, "pbroute absent");
+    return;
+  }
   const args = m[1];
   const get = (k) => { const r = args.match(new RegExp(k + "\\s*=\\s*([^\\s\\]]+)")); return r ? r[1] : undefined; };
   const updates = {};
   for (const k of ["provider", "model", "profile"]) { const v = get(k); if (v !== undefined) updates[k] = v; }
   if (!Object.keys(updates).length) { await resetBaseline(tool, "pbroute with no valid fields"); return; }
+
+  // VALIDATE (fix B) + FAIL-SAFE (fix C): an unknown/placeholder provider/model/profile
+  // must never be written to app.db — that poisons the global route and crashes
+  // subagent creation (e.g. `not_found_error: model: <model-id>`). Reject the whole
+  // directive and fall back to the baseline (default brain) instead of crashing.
+  const reason = validateRoute(updates, loadCatalog());
+  if (reason) {
+    log(`ROUTE REJECTED (${reason}) ${JSON.stringify(updates)} tool=${tool}`);
+    await resetBaseline(tool, "invalid route rejected");
+    return;
+  }
   log(`pbroute DETECTED ${JSON.stringify(updates)} tool=${tool}`);
 
   try {

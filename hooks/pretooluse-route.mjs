@@ -120,24 +120,52 @@ function loadCatalog() {
   } catch { return null; }
 }
 
+// ---- LIVE validation source (fix: catalog.json snapshot goes stale) ----
+// providers & profiles are static, cheap tables in app.db — read them LIVE so a
+// profile/provider created in the TUI after the last catalog regen is NOT wrongly
+// rejected (that bug silently fell every such route back to the default brain).
+// MODEL lists are NOT here on purpose: per-provider model availability requires a
+// live discovery call (refresh_provider_models) and is only cached in catalog.json.
+// Returns null when the tables aren't present (e.g. the isolated test db) so callers
+// fall back to the catalog and the permissive guard.
+function loadLive() {
+  try {
+    const db = new DatabaseSync(DB_PATH, { readOnly: true });
+    try {
+      const providerIds = new Set(db.prepare("SELECT id FROM providers").all().map((r) => String(r.id)));
+      const profileIds = new Set(db.prepare("SELECT id FROM profiles").all().map((r) => String(r.id)));
+      return { providerIds, profileIds };
+    } finally { db.close(); }
+  } catch { return null; }
+}
+
 // returns null if the route is OK, or a string REASON if it must be rejected.
-// If the catalog can't be loaded we stay permissive (only the placeholder guard
-// applies) so a missing/stale catalog never disables routing outright — but a
-// literal placeholder like `<model-id>` is ALWAYS rejected (that was the crash).
-function validateRoute(updates, catalog) {
+// Validation sources, in order of preference:
+//  - provider / profile: LIVE app.db (self-healing) -> catalog snapshot -> permissive
+//  - model: catalog snapshot only (needs live discovery to populate) -> permissive
+// A literal placeholder like `<model-id>` is ALWAYS rejected (that was the crash).
+function validateRoute(updates, catalog, live) {
   for (const [k, v] of Object.entries(updates)) {
     if (isPlaceholder(v)) return `${k}='${v}' is a placeholder/empty`;
   }
-  if (!catalog) return null;
-  if (updates.provider !== undefined && !catalog.providers.has(updates.provider))
-    return `unknown provider '${updates.provider}'`;
-  if (updates.model !== undefined) {
+  // permissive only when we have NO source of truth at all
+  if (!catalog && !live) return null;
+
+  if (updates.provider !== undefined) {
+    const known = live ? live.providerIds.has(updates.provider)
+                       : catalog.providers.has(updates.provider);
+    if (!known) return `unknown provider '${updates.provider}'`;
+  }
+  if (updates.model !== undefined && catalog) {
     const set = updates.provider !== undefined ? catalog.providers.get(updates.provider) : null;
     const known = set ? set.has(updates.model) : catalog.allModels.has(updates.model);
     if (!known) return `unknown model '${updates.model}'${updates.provider ? ` for provider ${updates.provider}` : ""}`;
   }
-  if (updates.profile !== undefined && !catalog.profiles.has(updates.profile))
-    return `unknown profile '${updates.profile}'`;
+  if (updates.profile !== undefined) {
+    const known = live ? live.profileIds.has(updates.profile)
+                       : catalog.profiles.has(updates.profile);
+    if (!known) return `unknown profile '${updates.profile}'`;
+  }
   return null;
 }
 
@@ -175,7 +203,7 @@ async function main() {
   // must never be written to app.db — that poisons the global route and crashes
   // subagent creation (e.g. `not_found_error: model: <model-id>`). Reject the whole
   // directive and fall back to the baseline (default brain) instead of crashing.
-  const reason = validateRoute(updates, loadCatalog());
+  const reason = validateRoute(updates, loadCatalog(), loadLive());
   if (reason) {
     log(`ROUTE REJECTED (${reason}) ${JSON.stringify(updates)} tool=${tool}`);
     await resetBaseline(tool, "invalid route rejected");

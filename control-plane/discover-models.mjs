@@ -5,18 +5,22 @@
 //
 // Usage:  PIEBALD_WEB_TOKEN=... node control-plane/discover-models.mjs
 //          [--out catalog.json] [--cached]   (--cached uses list_available_models, doesn't hit the provider)
+//          [--with-probe]   (after listing, fire a worker per model and tag each runs|lists-only
+//                            with the real HTTP cause; failures cleaned up; adds _meta.probe)
 
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { PiebaldWS, getToken } from "./ws-client.mjs";
+import { runMany } from "./orchestrate.mjs";
 
 const __dir = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = process.env.PIEBALD_APP_DB || path.join(process.env.APPDATA, "Piebald", "app.db");
 const outArg = process.argv.indexOf("--out");
 const OUT = path.join(__dir, outArg !== -1 ? process.argv[outArg + 1] : "catalog.json");
 const CACHED = process.argv.includes("--cached");
+const WITH_PROBE = process.argv.includes("--with-probe");
 
 function sql(q) { return execFileSync("sqlite3", [DB_PATH, q], { encoding: "utf8" }).trim(); }
 
@@ -50,6 +54,60 @@ function slimModel(m) {
   if (m.default_reasoning_level) out.default_reasoning = m.default_reasoning_level;
   if (m.support_verbosity != null) out.supports_verbosity = m.support_verbosity;
   return out;
+}
+
+// --with-probe: fire a trivial worker per (provider,model), mark each model
+// `probe: runs | lists-only` (catalog "lists" != "actually runs"). Successes auto-delete;
+// failures are kept just long enough to read their real HTTP cause (403/404/400) from
+// app.db, then deleted (no leftover pbprobe chats). Adds out._meta.probe. Costs a little
+// quota + time — that's why it's opt-in via the flag.
+async function probeAndAnnotate(pb, out) {
+  const specs = [];
+  for (const p of out.providers) {
+    for (const m of p.models || []) {
+      specs.push({
+        provider_id: p.id, model: m.id,
+        task: "Reply with exactly this and nothing else: PROBE-OK. Do not use tools.",
+        keep: false, title: `pbprobe/${p.id}-${m.id}`, _ref: m,
+      });
+    }
+  }
+  if (!specs.length) return;
+  console.error(`\n--with-probe: probing ${specs.length} models (concurrency 2)...`);
+  const results = await runMany(pb, specs, { maxConcurrency: 2, resultTimeoutMs: 60000 });
+  let runs = 0, lists = 0;
+  for (let i = 0; i < specs.length; i++) {
+    const r = results[i], m = specs[i]._ref;
+    if (r.ok) { m.probe = "runs"; delete m.probe_note; runs++; continue; }
+    m.probe = "lists-only"; lists++;
+    let note = r.error ? String(r.error).slice(0, 120) : `status=${r.status || "error"}`;
+    if (r.chatId) {
+      try {
+        const row = sql(`SELECT resp.status_code||'|||'||substr(resp.response_body,1,500)
+          FROM messages mm JOIN http_request_chat_message_data d ON d.message_id=mm.id
+          JOIN http_responses resp ON resp.http_request_id=d.http_request_id
+          WHERE mm.parent_chat_id=${Number(r.chatId)} AND resp.status_code>=400
+          ORDER BY resp.http_request_id DESC LIMIT 1;`);
+        if (row) {
+          const sep = row.indexOf("|||");
+          const code = row.slice(0, sep);
+          const body = row.slice(sep + 3);
+          const msg = (body.match(/"message"\s*:\s*"([^"]+)"/) || [])[1]
+            || body.replace(/\s+/g, " ").trim().slice(0, 100);
+          note = `HTTP ${code}: ${msg}`;
+        }
+      } catch { /* best-effort */ }
+      await pb.deleteChat(r.chatId).catch(() => {});
+    }
+    m.probe_note = note;
+  }
+  out._meta.probe = {
+    date: new Date().toISOString().slice(0, 10),
+    source: "discover-models.mjs --with-probe (provider×model worker probe, default profile)",
+    summary: `${runs}/${runs + lists} models actually run (200/completed); ${lists} list-only (error at generation)`,
+    semantics: "probe=runs => a worker completed with text. probe=lists-only => provider lists the model but it errors at generation (see probe_note). Snapshot; re-run with --with-probe to refresh. The pbroute hook validates EXISTENCE only, NOT probe status.",
+  };
+  console.error(`--with-probe: ${runs} runs / ${lists} lists-only.`);
 }
 
 const pb = new PiebaldWS(getToken());
@@ -89,7 +147,9 @@ try {
     console.error(`provider ${p.id} ${p.name}: ${entry.status} (${entry.model_count || 0})`);
   }
   out.profiles = profileEfforts();
+  if (WITH_PROBE) await probeAndAnnotate(pb, out);
   writeFileSync(OUT, JSON.stringify(out, null, 2));
   const total = out.providers.reduce((a, p) => a + (p.model_count || 0), 0);
-  console.error(`\nWritten ${path.basename(OUT)}: ${out.providers.length} providers, ${total} models, ${out.profiles.length} profiles.`);
+  const probed = WITH_PROBE ? ` (probed: ${out._meta.probe?.summary || "—"})` : "";
+  console.error(`\nWritten ${path.basename(OUT)}: ${out.providers.length} providers, ${total} models, ${out.profiles.length} profiles.${probed}`);
 } finally { pb.close(); }

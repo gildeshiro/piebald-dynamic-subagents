@@ -35,6 +35,26 @@ function seedDb() {
   ins.run("subagent_profile_id", SEED.profile);
   db.close();
 }
+// seeds settings + LIVE providers/profiles tables, mirroring the real app.db so the
+// hook's loadLive() path is exercised. `profileIds`/`providerIds` let a test assert
+// that a profile/provider present LIVE but absent from the (stale) catalog.json is
+// still accepted — the exact staleness bug being fixed.
+function seedDbLive({ providerIds = [], profileIds = [] } = {}) {
+  if (existsSync(TEST_DB)) rmSync(TEST_DB);
+  const db = new DatabaseSync(TEST_DB);
+  db.exec("CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT)");
+  db.exec("CREATE TABLE providers (id INTEGER PRIMARY KEY, name TEXT)");
+  db.exec("CREATE TABLE profiles (id INTEGER PRIMARY KEY, name TEXT)");
+  const si = db.prepare("INSERT INTO settings (key,value) VALUES (?,?)");
+  si.run("subagent_provider_id", SEED.provider);
+  si.run("subagent_model", SEED.model);
+  si.run("subagent_profile_id", SEED.profile);
+  const pi = db.prepare("INSERT INTO providers (id,name) VALUES (?,?)");
+  for (const id of providerIds) pi.run(id, `prov${id}`);
+  const fi = db.prepare("INSERT INTO profiles (id,name) VALUES (?,?)");
+  for (const id of profileIds) fi.run(id, `prof${id}`);
+  db.close();
+}
 function readRoute() {
   const db = new DatabaseSync(TEST_DB);
   const g = (k) => { const r = db.prepare("SELECT value FROM settings WHERE key=?").get(k); return r ? r.value : null; };
@@ -103,6 +123,24 @@ seedDb();
 runHook({ tool_name: "Bash", tool_input: { command: "echo [[pbroute provider=3 model=claude-opus-4-8]]" } });
 r = readRoute();
 check("T5 non-subagent tool leaves seed untouched", r.model === SEED.model && r.provider === SEED.provider, JSON.stringify(r));
+
+// T6 — LIVE app.db self-heal: a profile present LIVE but ABSENT from the stale
+// catalog.json must be ACCEPTED (this is the staleness bug fix). profile 32 is not
+// in catalog.json (which only knows 1-4) but exists in the live profiles table.
+seedDbLive({ providerIds: [2], profileIds: [32] });
+runHook(ev("[[pbroute provider=2 model=gemini-3.1-pro-high profile=32]] task"));
+r = readRoute();
+check("T6 live-only profile accepted (routes)", r.profile === "32", JSON.stringify(r));
+check("T6 live route applies provider", r.provider === "2", JSON.stringify(r));
+check("T6 live route applies model", r.model === "gemini-3.1-pro-high", JSON.stringify(r));
+
+// T7 — with LIVE tables present, a profile absent from BOTH live and catalog is
+// still REJECTED (validation didn't become permissive).
+seedDbLive({ providerIds: [2], profileIds: [32] });
+runHook(ev("[[pbroute provider=2 model=gemini-3.1-pro-high profile=999]] task"));
+r = readRoute();
+check("T7 unknown-everywhere profile rejected", r.profile === BASE.profile, JSON.stringify(r));
+check("T7 reject logged", /REJECT/i.test(logTail()), logTail());
 
 // cleanup
 if (existsSync(TEST_DB)) rmSync(TEST_DB);

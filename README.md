@@ -29,7 +29,7 @@ Any subset of the three fields is valid; only the present ones are applied. With
 the tag, the subagent inherits the current default (Claude). Examples:
 
 ```
-[[pbroute provider=5 model=gemini-3-pro-preview]]            Research this API and summarize…
+[[pbroute provider=2 model=gemini-3.1-pro-low]]             Research this API and summarize…
 [[pbroute provider=3 model=claude-opus-4-8 profile=4]]        Perform the security audit…
 [[pbroute provider=4 model=gpt-5.5]]                          Critique this plan…
 ```
@@ -72,7 +72,8 @@ The route is a **global state** that the hook flips per launch. Therefore:
 - No tag → inherits the default; use the tag only when the subagent **truly** needs
   a different brain.
 
-Validation: proven end-to-end across all 5 providers; 37 models probed (`docs/native-hook-e2e.md`,
+Validation: proven end-to-end across all providers; 41 models probed (25 run, 16 list-only —
+see `control-plane/catalog.json` `probe` flags + `_meta.probe`; `docs/native-hook-e2e.md`,
 `docs/smoke-results.md`).
 
 ---

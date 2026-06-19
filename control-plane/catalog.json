@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated": "2026-06-10T23:25:13.315Z",
+    "generated": "2026-06-19T00:02:43.451Z",
     "source": "refresh_provider_models (live)",
     "regenerate": "node control-plane/discover-models.mjs",
     "reasoning_note": "In the Piebald schema, reasoning for ALL engines is controlled by the PROFILE (the profile's generation_config stores anthropic.effort + openai.reasoning_effort + google.thinking_budget together). Selecting a profile = selecting reasoning. It is the only reasoning lever in our setup.",
@@ -11,7 +11,13 @@
       "high",
       "xhigh"
     ],
-    "openai_default_reasoning": "medium"
+    "openai_default_reasoning": "medium",
+    "probe": {
+      "date": "2026-06-18",
+      "source": "control-plane/probe.mjs (provider×model worker probe, default profile)",
+      "summary": "25/41 models actually run (200/completed); 16 list-only (error at generation)",
+      "semantics": "probe=runs => a worker completed with text. probe=lists-only => provider lists the model but it errors at generation (see probe_note). This is a 2026-06-18 snapshot; re-run probe.mjs to refresh. The pbroute hook validates EXISTENCE only, NOT probe status."
+    }
   },
   "providers": [
     {
@@ -19,9 +25,77 @@
       "name": "Antigravity: personal@example.com",
       "engine_type": "google",
       "type": "antigravity_login",
-      "status": "empty",
-      "model_count": 0,
-      "models": []
+      "status": "ok",
+      "model_count": 6,
+      "models": [
+        {
+          "id": "gemini-3.1-pro-high",
+          "display": "gemini-3.1-pro-high",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 400 INVALID_ARGUMENT (Antigravity backend rejects this variant; identical payload to -low passes -> use gemini-3.1-pro-low)"
+        },
+        {
+          "id": "gemini-3.1-pro-low",
+          "display": "gemini-3.1-pro-low",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gemini-3-flash",
+          "display": "gemini-3-flash",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "claude-opus-4-6-thinking",
+          "display": "claude-opus-4-6-thinking",
+          "context": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "context_window": null,
+            "notes": "Context limits not available"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "claude-sonnet-4-6",
+          "display": "claude-sonnet-4-6",
+          "context": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "context_window": null,
+            "notes": "Context limits not available"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gpt-oss-120b-medium",
+          "display": "gpt-oss-120b-medium",
+          "context": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "context_window": null,
+            "notes": "Context limits not available"
+          },
+          "probe": "runs"
+        }
+      ]
     },
     {
       "id": 5,
@@ -39,7 +113,9 @@
             "output_tokens": 8192,
             "context_window": 2000000,
             "notes": "Gemini 3.0+ series with extended context"
-          }
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 404 NOT_FOUND (not served on this google_login account; only gemini-2.5-* run)"
         },
         {
           "id": "gemini-3.1-pro-preview-customtools",
@@ -49,7 +125,9 @@
             "output_tokens": 8192,
             "context_window": 2000000,
             "notes": "Gemini 3.0+ series with extended context"
-          }
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 404 NOT_FOUND (not served on this google_login account; only gemini-2.5-* run)"
         },
         {
           "id": "gemini-3-pro-preview",
@@ -59,7 +137,9 @@
             "output_tokens": 8192,
             "context_window": 2000000,
             "notes": "Gemini 3.0+ series with extended context"
-          }
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 404 NOT_FOUND (not served on this google_login account; only gemini-2.5-* run)"
         },
         {
           "id": "gemini-3-flash-preview",
@@ -69,7 +149,9 @@
             "output_tokens": 8192,
             "context_window": 2000000,
             "notes": "Gemini 3.0+ series with extended context"
-          }
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 404 NOT_FOUND (not served on this google_login account; only gemini-2.5-* run)"
         },
         {
           "id": "gemini-2.5-pro",
@@ -79,7 +161,8 @@
             "output_tokens": 8192,
             "context_window": 2000000,
             "notes": "Gemini 2.0 Pro with 2M context window"
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "gemini-2.5-flash",
@@ -89,7 +172,8 @@
             "output_tokens": 8192,
             "context_window": 1000000,
             "notes": "Gemini 2.0 Flash with 1M context window"
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "gemini-2.5-flash-lite",
@@ -99,7 +183,8 @@
             "output_tokens": 8192,
             "context_window": 1000000,
             "notes": "Gemini 2.0 Flash with 1M context window"
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "gemini-2.0-flash",
@@ -109,7 +194,9 @@
             "output_tokens": 8192,
             "context_window": 1000000,
             "notes": "Gemini 2.0 Flash with 1M context window"
-          }
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 404 NOT_FOUND (not served on this google_login account; only gemini-2.5-* run)"
         }
       ]
     },
@@ -129,7 +216,8 @@
             "output_tokens": null,
             "context_window": 272000,
             "notes": null
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "gpt-5.4",
@@ -139,7 +227,8 @@
             "output_tokens": null,
             "context_window": 272000,
             "notes": null
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "gpt-5.4-mini",
@@ -149,7 +238,8 @@
             "output_tokens": null,
             "context_window": 272000,
             "notes": null
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "codex-auto-review",
@@ -159,7 +249,8 @@
             "output_tokens": null,
             "context_window": 272000,
             "notes": null
-          }
+          },
+          "probe": "runs"
         }
       ]
     },
@@ -169,7 +260,7 @@
       "engine_type": "claude_code",
       "type": "anthropic_login",
       "status": "ok",
-      "model_count": 11,
+      "model_count": 9,
       "models": [
         {
           "id": "claude-fable-5",
@@ -179,7 +270,9 @@
             "output_tokens": 8000,
             "context_window": 200000,
             "notes": "Enterprise customers may access 1M+ token processing"
-          }
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 404 retired (\"use Opus 4.8\")"
         },
         {
           "id": "claude-opus-4-8",
@@ -189,7 +282,8 @@
             "output_tokens": 64000,
             "context_window": 200000,
             "notes": "Claude 4 series with extended output capabilities"
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "claude-opus-4-7",
@@ -199,7 +293,8 @@
             "output_tokens": 64000,
             "context_window": 200000,
             "notes": "Claude 4 series with extended output capabilities"
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "claude-sonnet-4-6",
@@ -209,7 +304,8 @@
             "output_tokens": 64000,
             "context_window": 200000,
             "notes": "Claude 4 series with extended output capabilities"
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "claude-opus-4-6",
@@ -219,7 +315,8 @@
             "output_tokens": 64000,
             "context_window": 200000,
             "notes": "Claude 4 series with extended output capabilities"
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "claude-opus-4-5-20251101",
@@ -229,7 +326,8 @@
             "output_tokens": 64000,
             "context_window": 200000,
             "notes": "Claude 4 series with extended output capabilities"
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "claude-haiku-4-5-20251001",
@@ -239,7 +337,8 @@
             "output_tokens": 8000,
             "context_window": 200000,
             "notes": "Enterprise customers may access 1M+ token processing"
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "claude-sonnet-4-5-20250929",
@@ -249,7 +348,8 @@
             "output_tokens": 64000,
             "context_window": 200000,
             "notes": "Claude 4 series with extended output capabilities"
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "claude-opus-4-1-20250805",
@@ -259,27 +359,8 @@
             "output_tokens": 64000,
             "context_window": 200000,
             "notes": "Claude 4 series with extended output capabilities"
-          }
-        },
-        {
-          "id": "claude-opus-4-20250514",
-          "display": "Claude Opus 4",
-          "context": {
-            "input_tokens": 200000,
-            "output_tokens": 64000,
-            "context_window": 200000,
-            "notes": "Claude 4 series with extended output capabilities"
-          }
-        },
-        {
-          "id": "claude-sonnet-4-20250514",
-          "display": "Claude Sonnet 4",
-          "context": {
-            "input_tokens": 200000,
-            "output_tokens": 64000,
-            "context_window": 200000,
-            "notes": "Claude 4 series with extended output capabilities"
-          }
+          },
+          "probe": "runs"
         }
       ]
     },
@@ -299,7 +380,9 @@
             "output_tokens": 8192,
             "context_window": 2000000,
             "notes": "Gemini 3.0+ series with extended context"
-          }
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 400 INVALID_ARGUMENT (Antigravity backend rejects this variant; identical payload to -low passes -> use gemini-3.1-pro-low)"
         },
         {
           "id": "gemini-3.1-pro-low",
@@ -309,7 +392,8 @@
             "output_tokens": 8192,
             "context_window": 2000000,
             "notes": "Gemini 3.0+ series with extended context"
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "gemini-3-flash",
@@ -319,7 +403,8 @@
             "output_tokens": 8192,
             "context_window": 2000000,
             "notes": "Gemini 3.0+ series with extended context"
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "claude-opus-4-6-thinking",
@@ -329,7 +414,8 @@
             "output_tokens": null,
             "context_window": null,
             "notes": "Context limits not available"
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "claude-sonnet-4-6",
@@ -339,7 +425,8 @@
             "output_tokens": null,
             "context_window": null,
             "notes": "Context limits not available"
-          }
+          },
+          "probe": "runs"
         },
         {
           "id": "gpt-oss-120b-medium",
@@ -349,7 +436,8 @@
             "output_tokens": null,
             "context_window": null,
             "notes": "Context limits not available"
-          }
+          },
+          "probe": "runs"
         }
       ]
     },
@@ -369,7 +457,9 @@
             "output_tokens": 8192,
             "context_window": 2000000,
             "notes": "Gemini 3.0+ series with extended context"
-          }
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 403 no-license (account has no generation entitlement; lists but cannot run)"
         },
         {
           "id": "gemini-3.1-pro-preview-customtools",
@@ -379,7 +469,9 @@
             "output_tokens": 8192,
             "context_window": 2000000,
             "notes": "Gemini 3.0+ series with extended context"
-          }
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 403 no-license (account has no generation entitlement; lists but cannot run)"
         },
         {
           "id": "gemini-3-pro-preview",
@@ -389,7 +481,9 @@
             "output_tokens": 8192,
             "context_window": 2000000,
             "notes": "Gemini 3.0+ series with extended context"
-          }
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 403 no-license (account has no generation entitlement; lists but cannot run)"
         },
         {
           "id": "gemini-3-flash-preview",
@@ -399,7 +493,9 @@
             "output_tokens": 8192,
             "context_window": 2000000,
             "notes": "Gemini 3.0+ series with extended context"
-          }
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 403 no-license (account has no generation entitlement; lists but cannot run)"
         },
         {
           "id": "gemini-2.5-pro",
@@ -409,7 +505,9 @@
             "output_tokens": 8192,
             "context_window": 2000000,
             "notes": "Gemini 2.0 Pro with 2M context window"
-          }
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 403 no-license (account has no generation entitlement; lists but cannot run)"
         },
         {
           "id": "gemini-2.5-flash",
@@ -419,7 +517,9 @@
             "output_tokens": 8192,
             "context_window": 1000000,
             "notes": "Gemini 2.0 Flash with 1M context window"
-          }
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 403 no-license (account has no generation entitlement; lists but cannot run)"
         },
         {
           "id": "gemini-2.5-flash-lite",
@@ -429,7 +529,9 @@
             "output_tokens": 8192,
             "context_window": 1000000,
             "notes": "Gemini 2.0 Flash with 1M context window"
-          }
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 403 no-license (account has no generation entitlement; lists but cannot run)"
         },
         {
           "id": "gemini-2.0-flash",
@@ -439,7 +541,9 @@
             "output_tokens": 8192,
             "context_window": 1000000,
             "notes": "Gemini 2.0 Flash with 1M context window"
-          }
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 403 no-license (account has no generation entitlement; lists but cannot run)"
         }
       ]
     }
@@ -448,10 +552,10 @@
     {
       "id": 1,
       "name": "Default",
-      "config_id": 135,
+      "config_id": 290,
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
-      "openai_reasoning_effort": "xhigh",
+      "openai_reasoning_effort": "high",
       "google_thinking_budget": 0
     },
     {
@@ -475,11 +579,281 @@
     {
       "id": 4,
       "name": "test",
-      "config_id": 36,
+      "config_id": 344,
+      "anthropic_effort": null,
+      "thinking_mode": null,
+      "openai_reasoning_effort": "none",
+      "google_thinking_budget": 1024
+    },
+    {
+      "id": 7,
+      "name": "fullstep-max",
+      "config_id": 286,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": 32768
+    },
+    {
+      "id": 8,
+      "name": "CAI · red-teamer",
+      "config_id": 302,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": 32768
+    },
+    {
+      "id": 9,
+      "name": "CAI · web-pentester",
+      "config_id": 303,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": 32768
+    },
+    {
+      "id": 10,
+      "name": "CAI · bug-bounter",
+      "config_id": 304,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": 32768
+    },
+    {
+      "id": 11,
+      "name": "CAI · memory-analysis",
+      "config_id": 305,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": 32768
+    },
+    {
+      "id": 12,
+      "name": "CAI · reverse-engineering",
+      "config_id": 306,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": 32768
+    },
+    {
+      "id": 13,
+      "name": "CAI · retester",
+      "config_id": 307,
+      "anthropic_effort": "high",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "high",
+      "google_thinking_budget": 16384
+    },
+    {
+      "id": 14,
+      "name": "CAI · reporter",
+      "config_id": 308,
+      "anthropic_effort": "low",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "low",
+      "google_thinking_budget": 0
+    },
+    {
+      "id": 15,
+      "name": "Octo · cloud-architect",
+      "config_id": 314,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": 32768
+    },
+    {
+      "id": 16,
+      "name": "Octo · code-reviewer",
+      "config_id": 315,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": 32768
+    },
+    {
+      "id": 17,
+      "name": "Octo · database-architect",
+      "config_id": 318,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": 32768
+    },
+    {
+      "id": 18,
+      "name": "Octo · graphql-architect",
+      "config_id": 319,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": 32768
+    },
+    {
+      "id": 19,
+      "name": "Octo · openclaw-admin",
+      "config_id": 320,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": 32768
+    },
+    {
+      "id": 20,
+      "name": "Octo · python-pro",
+      "config_id": 321,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": 32768
+    },
+    {
+      "id": 21,
+      "name": "Octo · security-auditor",
+      "config_id": 322,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": 32768
+    },
+    {
+      "id": 22,
+      "name": "Octo · tdd-orchestrator",
+      "config_id": 323,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": 32768
+    },
+    {
+      "id": 23,
+      "name": "Octo · typescript-pro",
+      "config_id": 324,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": 32768
+    },
+    {
+      "id": 24,
+      "name": "Octo · debugger",
+      "config_id": 325,
+      "anthropic_effort": "high",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "high",
+      "google_thinking_budget": 16384
+    },
+    {
+      "id": 25,
+      "name": "Octo · devops-troubleshooter",
+      "config_id": 326,
+      "anthropic_effort": "high",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "high",
+      "google_thinking_budget": 16384
+    },
+    {
+      "id": 26,
+      "name": "Octo · docs-architect",
+      "config_id": 327,
+      "anthropic_effort": "high",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "high",
+      "google_thinking_budget": 16384
+    },
+    {
+      "id": 27,
+      "name": "Octo · incident-responder",
+      "config_id": 328,
+      "anthropic_effort": "high",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "high",
+      "google_thinking_budget": 16384
+    },
+    {
+      "id": 28,
+      "name": "Octo · test-automator",
+      "config_id": 329,
+      "anthropic_effort": "high",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "high",
+      "google_thinking_budget": 16384
+    },
+    {
+      "id": 29,
+      "name": "Octo · ui-ux-designer",
+      "config_id": 330,
+      "anthropic_effort": "high",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "high",
+      "google_thinking_budget": 16384
+    },
+    {
+      "id": 30,
+      "name": "Octo · ai-engineer",
+      "config_id": 331,
+      "anthropic_effort": "high",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "high",
+      "google_thinking_budget": 16384
+    },
+    {
+      "id": 31,
+      "name": "Octo · backend-architect",
+      "config_id": 332,
+      "anthropic_effort": "high",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "high",
+      "google_thinking_budget": 16384
+    },
+    {
+      "id": 32,
+      "name": "Octo · frontend-developer",
+      "config_id": 333,
+      "anthropic_effort": "high",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "high",
+      "google_thinking_budget": 16384
+    },
+    {
+      "id": 33,
+      "name": "Octo · performance-engineer",
+      "config_id": 334,
+      "anthropic_effort": "high",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "high",
+      "google_thinking_budget": 16384
+    },
+    {
+      "id": 34,
+      "name": "Octo · deployment-engineer",
+      "config_id": 335,
+      "anthropic_effort": "low",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "low",
+      "google_thinking_budget": 0
+    },
+    {
+      "id": 35,
+      "name": "Octo · mermaid-expert",
+      "config_id": 336,
+      "anthropic_effort": "low",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "low",
+      "google_thinking_budget": 0
+    },
+    {
+      "id": 36,
+      "name": "F5-Default",
+      "config_id": 407,
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "high",
-      "google_thinking_budget": -1
+      "google_thinking_budget": null
     }
   ]
 }

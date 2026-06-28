@@ -21,6 +21,8 @@ const outArg = process.argv.indexOf("--out");
 const OUT = path.join(__dir, outArg !== -1 ? process.argv[outArg + 1] : "catalog.json");
 const CACHED = process.argv.includes("--cached");
 const WITH_PROBE = process.argv.includes("--with-probe");
+const ppIdx = process.argv.indexOf("--probe-profile");
+const PROBE_PROFILE = ppIdx !== -1 ? Number(process.argv[ppIdx + 1]) : undefined;
 
 function sql(q) { return execFileSync("sqlite3", [DB_PATH, q], { encoding: "utf8" }).trim(); }
 
@@ -68,7 +70,7 @@ async function probeAndAnnotate(pb, out) {
       specs.push({
         provider_id: p.id, model: m.id,
         task: "Reply with exactly this and nothing else: PROBE-OK. Do not use tools.",
-        keep: false, title: `pbprobe/${p.id}-${m.id}`, _ref: m,
+        keep: false, title: `pbprobe/${p.id}-${m.id}`, _ref: m, profile_id: PROBE_PROFILE,
       });
     }
   }

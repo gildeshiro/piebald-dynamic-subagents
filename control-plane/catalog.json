@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated": "2026-06-19T00:02:43.451Z",
+    "generated": "2026-06-28T00:10:45.992Z",
     "source": "refresh_provider_models (live)",
     "regenerate": "node control-plane/discover-models.mjs",
     "reasoning_note": "In the Piebald schema, reasoning for ALL engines is controlled by the PROFILE (the profile's generation_config stores anthropic.effort + openai.reasoning_effort + google.thinking_budget together). Selecting a profile = selecting reasoning. It is the only reasoning lever in our setup.",
@@ -13,55 +13,21 @@
     ],
     "openai_default_reasoning": "medium",
     "probe": {
-      "date": "2026-06-18",
-      "source": "control-plane/probe.mjs (provider×model worker probe, default profile)",
-      "summary": "25/41 models actually run (200/completed); 16 list-only (error at generation)",
-      "semantics": "probe=runs => a worker completed with text. probe=lists-only => provider lists the model but it errors at generation (see probe_note). This is a 2026-06-18 snapshot; re-run probe.mjs to refresh. The pbroute hook validates EXISTENCE only, NOT probe status."
+      "date": "2026-06-28",
+      "source": "discover-models.mjs --with-probe (provider×model worker probe, default profile)",
+      "summary": "34/50 models actually run (200/completed); 16 list-only (error at generation)",
+      "semantics": "probe=runs => a worker completed with text. probe=lists-only => provider lists the model but it errors at generation (see probe_note). Snapshot; re-run with --with-probe to refresh. The pbroute hook validates EXISTENCE only, NOT probe status."
     }
   },
   "providers": [
     {
       "id": 9,
-      "name": "Antigravity: personal@example.com",
+      "name": "Antigravity: gildeshiro@gmail.com",
       "engine_type": "google",
       "type": "antigravity_login",
       "status": "ok",
-      "model_count": 6,
+      "model_count": 15,
       "models": [
-        {
-          "id": "gemini-3.1-pro-high",
-          "display": "gemini-3.1-pro-high",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 400 INVALID_ARGUMENT (Antigravity backend rejects this variant; identical payload to -low passes -> use gemini-3.1-pro-low)"
-        },
-        {
-          "id": "gemini-3.1-pro-low",
-          "display": "gemini-3.1-pro-low",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "gemini-3-flash",
-          "display": "gemini-3-flash",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
-        },
         {
           "id": "claude-opus-4-6-thinking",
           "display": "claude-opus-4-6-thinking",
@@ -85,6 +51,139 @@
           "probe": "runs"
         },
         {
+          "id": "gemini-2.5-flash",
+          "display": "gemini-2.5-flash",
+          "context": {
+            "input_tokens": 1000000,
+            "output_tokens": 8192,
+            "context_window": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gemini-2.5-flash-lite",
+          "display": "gemini-2.5-flash-lite",
+          "context": {
+            "input_tokens": 1000000,
+            "output_tokens": 8192,
+            "context_window": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gemini-2.5-flash-thinking",
+          "display": "gemini-2.5-flash-thinking",
+          "context": {
+            "input_tokens": 1000000,
+            "output_tokens": 8192,
+            "context_window": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gemini-2.5-pro",
+          "display": "gemini-2.5-pro",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 2.0 Pro with 2M context window"
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 503: No capacity available for model gemini-2.5-pro on the server"
+        },
+        {
+          "id": "gemini-3-flash",
+          "display": "gemini-3-flash",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gemini-3-flash-agent",
+          "display": "gemini-3-flash-agent",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gemini-3.1-flash-image",
+          "display": "gemini-3.1-flash-image",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gemini-3.1-flash-lite",
+          "display": "gemini-3.1-flash-lite",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gemini-3.1-pro-low",
+          "display": "gemini-3.1-pro-low",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gemini-3.5-flash-extra-low",
+          "display": "gemini-3.5-flash-extra-low",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gemini-3.5-flash-low",
+          "display": "gemini-3.5-flash-low",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gemini-pro-agent",
+          "display": "gemini-pro-agent",
+          "context": {
+            "input_tokens": 30720,
+            "output_tokens": 2048,
+            "context_window": 30720,
+            "notes": "Gemini 1.0 Pro"
+          },
+          "probe": "runs"
+        },
+        {
           "id": "gpt-oss-120b-medium",
           "display": "gpt-oss-120b-medium",
           "context": {
@@ -99,7 +198,7 @@
     },
     {
       "id": 5,
-      "name": "Google: work@example.com",
+      "name": "Google: jean.mgcosta@gmail.com",
       "engine_type": "google",
       "type": "google_login",
       "status": "ok",
@@ -115,7 +214,7 @@
             "notes": "Gemini 3.0+ series with extended context"
           },
           "probe": "lists-only",
-          "probe_note": "HTTP 404 NOT_FOUND (not served on this google_login account; only gemini-2.5-* run)"
+          "probe_note": "HTTP 404: Requested entity was not found."
         },
         {
           "id": "gemini-3.1-pro-preview-customtools",
@@ -127,7 +226,7 @@
             "notes": "Gemini 3.0+ series with extended context"
           },
           "probe": "lists-only",
-          "probe_note": "HTTP 404 NOT_FOUND (not served on this google_login account; only gemini-2.5-* run)"
+          "probe_note": "HTTP 404: Requested entity was not found."
         },
         {
           "id": "gemini-3-pro-preview",
@@ -139,7 +238,7 @@
             "notes": "Gemini 3.0+ series with extended context"
           },
           "probe": "lists-only",
-          "probe_note": "HTTP 404 NOT_FOUND (not served on this google_login account; only gemini-2.5-* run)"
+          "probe_note": "HTTP 404: Requested entity was not found."
         },
         {
           "id": "gemini-3-flash-preview",
@@ -151,7 +250,7 @@
             "notes": "Gemini 3.0+ series with extended context"
           },
           "probe": "lists-only",
-          "probe_note": "HTTP 404 NOT_FOUND (not served on this google_login account; only gemini-2.5-* run)"
+          "probe_note": "HTTP 404: Requested entity was not found."
         },
         {
           "id": "gemini-2.5-pro",
@@ -196,32 +295,21 @@
             "notes": "Gemini 2.0 Flash with 1M context window"
           },
           "probe": "lists-only",
-          "probe_note": "HTTP 404 NOT_FOUND (not served on this google_login account; only gemini-2.5-* run)"
+          "probe_note": "HTTP 404: Requested entity was not found."
         }
       ]
     },
     {
       "id": 4,
-      "name": "ChatGPT Plus: pj@example.com",
+      "name": "ChatGPT Plus: shirojpj@gmail.com",
       "engine_type": "openai_responses",
       "type": "open_ai_login",
       "status": "ok",
-      "model_count": 4,
+      "model_count": 3,
       "models": [
         {
           "id": "gpt-5.5",
           "display": "GPT-5.5",
-          "context": {
-            "input_tokens": null,
-            "output_tokens": null,
-            "context_window": 272000,
-            "notes": null
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "gpt-5.4",
-          "display": "GPT-5.4",
           "context": {
             "input_tokens": null,
             "output_tokens": null,
@@ -256,7 +344,7 @@
     },
     {
       "id": 3,
-      "name": "Claude Max: personal@example.com",
+      "name": "Claude Max: gildeshiro@gmail.com",
       "engine_type": "claude_code",
       "type": "anthropic_login",
       "status": "ok",
@@ -272,7 +360,7 @@
             "notes": "Enterprise customers may access 1M+ token processing"
           },
           "probe": "lists-only",
-          "probe_note": "HTTP 404 retired (\"use Opus 4.8\")"
+          "probe_note": "HTTP 401: Invalid authentication credentials"
         },
         {
           "id": "claude-opus-4-8",
@@ -283,7 +371,8 @@
             "context_window": 200000,
             "notes": "Claude 4 series with extended output capabilities"
           },
-          "probe": "runs"
+          "probe": "lists-only",
+          "probe_note": "HTTP 401: Invalid authentication credentials"
         },
         {
           "id": "claude-opus-4-7",
@@ -294,18 +383,8 @@
             "context_window": 200000,
             "notes": "Claude 4 series with extended output capabilities"
           },
-          "probe": "runs"
-        },
-        {
-          "id": "claude-sonnet-4-6",
-          "display": "Claude Sonnet 4.6",
-          "context": {
-            "input_tokens": 200000,
-            "output_tokens": 64000,
-            "context_window": 200000,
-            "notes": "Claude 4 series with extended output capabilities"
-          },
-          "probe": "runs"
+          "probe": "lists-only",
+          "probe_note": "HTTP 401: Invalid authentication credentials"
         },
         {
           "id": "claude-opus-4-6",
@@ -316,7 +395,20 @@
             "context_window": 200000,
             "notes": "Claude 4 series with extended output capabilities"
           },
-          "probe": "runs"
+          "probe": "lists-only",
+          "probe_note": "HTTP 401: Invalid authentication credentials"
+        },
+        {
+          "id": "claude-sonnet-4-6",
+          "display": "Claude Sonnet 4.6",
+          "context": {
+            "input_tokens": 200000,
+            "output_tokens": 64000,
+            "context_window": 200000,
+            "notes": "Claude 4 series with extended output capabilities"
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 401: Invalid authentication credentials"
         },
         {
           "id": "claude-opus-4-5-20251101",
@@ -327,29 +419,8 @@
             "context_window": 200000,
             "notes": "Claude 4 series with extended output capabilities"
           },
-          "probe": "runs"
-        },
-        {
-          "id": "claude-haiku-4-5-20251001",
-          "display": "Claude Haiku 4.5",
-          "context": {
-            "input_tokens": 200000,
-            "output_tokens": 8000,
-            "context_window": 200000,
-            "notes": "Enterprise customers may access 1M+ token processing"
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "claude-sonnet-4-5-20250929",
-          "display": "Claude Sonnet 4.5",
-          "context": {
-            "input_tokens": 200000,
-            "output_tokens": 64000,
-            "context_window": 200000,
-            "notes": "Claude 4 series with extended output capabilities"
-          },
-          "probe": "runs"
+          "probe": "lists-only",
+          "probe_note": "HTTP 401: Invalid authentication credentials"
         },
         {
           "id": "claude-opus-4-1-20250805",
@@ -360,52 +431,43 @@
             "context_window": 200000,
             "notes": "Claude 4 series with extended output capabilities"
           },
-          "probe": "runs"
+          "probe": "lists-only",
+          "probe_note": "HTTP 401: Invalid authentication credentials"
+        },
+        {
+          "id": "claude-sonnet-4-5-20250929",
+          "display": "Claude Sonnet 4.5",
+          "context": {
+            "input_tokens": 200000,
+            "output_tokens": 64000,
+            "context_window": 200000,
+            "notes": "Claude 4 series with extended output capabilities"
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 401: Invalid authentication credentials"
+        },
+        {
+          "id": "claude-haiku-4-5-20251001",
+          "display": "Claude Haiku 4.5",
+          "context": {
+            "input_tokens": 200000,
+            "output_tokens": 8000,
+            "context_window": 200000,
+            "notes": "Enterprise customers may access 1M+ token processing"
+          },
+          "probe": "lists-only",
+          "probe_note": "HTTP 401: Invalid authentication credentials"
         }
       ]
     },
     {
       "id": 2,
-      "name": "Antigravity: work@example.com",
+      "name": "Antigravity: jean.mgcosta@gmail.com",
       "engine_type": "google",
       "type": "antigravity_login",
       "status": "ok",
-      "model_count": 6,
+      "model_count": 15,
       "models": [
-        {
-          "id": "gemini-3.1-pro-high",
-          "display": "gemini-3.1-pro-high",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 400 INVALID_ARGUMENT (Antigravity backend rejects this variant; identical payload to -low passes -> use gemini-3.1-pro-low)"
-        },
-        {
-          "id": "gemini-3.1-pro-low",
-          "display": "gemini-3.1-pro-low",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "gemini-3-flash",
-          "display": "gemini-3-flash",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
-        },
         {
           "id": "claude-opus-4-6-thinking",
           "display": "claude-opus-4-6-thinking",
@@ -429,73 +491,37 @@
           "probe": "runs"
         },
         {
-          "id": "gpt-oss-120b-medium",
-          "display": "gpt-oss-120b-medium",
+          "id": "gemini-2.5-flash",
+          "display": "gemini-2.5-flash",
           "context": {
-            "input_tokens": null,
-            "output_tokens": null,
-            "context_window": null,
-            "notes": "Context limits not available"
+            "input_tokens": 1000000,
+            "output_tokens": 8192,
+            "context_window": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window"
           },
           "probe": "runs"
-        }
-      ]
-    },
-    {
-      "id": 1,
-      "name": "Google: personal@example.com",
-      "engine_type": "google",
-      "type": "google_login",
-      "status": "ok",
-      "model_count": 8,
-      "models": [
-        {
-          "id": "gemini-3.1-pro-preview",
-          "display": "gemini-3.1-pro-preview",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 403 no-license (account has no generation entitlement; lists but cannot run)"
         },
         {
-          "id": "gemini-3.1-pro-preview-customtools",
-          "display": "gemini-3.1-pro-preview-customtools",
+          "id": "gemini-2.5-flash-lite",
+          "display": "gemini-2.5-flash-lite",
           "context": {
-            "input_tokens": 2000000,
+            "input_tokens": 1000000,
             "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
+            "context_window": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window"
           },
-          "probe": "lists-only",
-          "probe_note": "HTTP 403 no-license (account has no generation entitlement; lists but cannot run)"
+          "probe": "runs"
         },
         {
-          "id": "gemini-3-pro-preview",
-          "display": "gemini-3-pro-preview",
+          "id": "gemini-2.5-flash-thinking",
+          "display": "gemini-2.5-flash-thinking",
           "context": {
-            "input_tokens": 2000000,
+            "input_tokens": 1000000,
             "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
+            "context_window": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window"
           },
-          "probe": "lists-only",
-          "probe_note": "HTTP 403 no-license (account has no generation entitlement; lists but cannot run)"
-        },
-        {
-          "id": "gemini-3-flash-preview",
-          "display": "gemini-3-flash-preview",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 403 no-license (account has no generation entitlement; lists but cannot run)"
+          "probe": "runs"
         },
         {
           "id": "gemini-2.5-pro",
@@ -507,43 +533,106 @@
             "notes": "Gemini 2.0 Pro with 2M context window"
           },
           "probe": "lists-only",
-          "probe_note": "HTTP 403 no-license (account has no generation entitlement; lists but cannot run)"
+          "probe_note": "HTTP 503: No capacity available for model gemini-2.5-pro on the server"
         },
         {
-          "id": "gemini-2.5-flash",
-          "display": "gemini-2.5-flash",
+          "id": "gemini-3-flash",
+          "display": "gemini-3-flash",
           "context": {
-            "input_tokens": 1000000,
+            "input_tokens": 2000000,
             "output_tokens": 8192,
-            "context_window": 1000000,
-            "notes": "Gemini 2.0 Flash with 1M context window"
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
           },
-          "probe": "lists-only",
-          "probe_note": "HTTP 403 no-license (account has no generation entitlement; lists but cannot run)"
+          "probe": "runs"
         },
         {
-          "id": "gemini-2.5-flash-lite",
-          "display": "gemini-2.5-flash-lite",
+          "id": "gemini-3-flash-agent",
+          "display": "gemini-3-flash-agent",
           "context": {
-            "input_tokens": 1000000,
+            "input_tokens": 2000000,
             "output_tokens": 8192,
-            "context_window": 1000000,
-            "notes": "Gemini 2.0 Flash with 1M context window"
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
           },
-          "probe": "lists-only",
-          "probe_note": "HTTP 403 no-license (account has no generation entitlement; lists but cannot run)"
+          "probe": "runs"
         },
         {
-          "id": "gemini-2.0-flash",
-          "display": "gemini-2.0-flash",
+          "id": "gemini-3.1-flash-image",
+          "display": "gemini-3.1-flash-image",
           "context": {
-            "input_tokens": 1000000,
+            "input_tokens": 2000000,
             "output_tokens": 8192,
-            "context_window": 1000000,
-            "notes": "Gemini 2.0 Flash with 1M context window"
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
           },
-          "probe": "lists-only",
-          "probe_note": "HTTP 403 no-license (account has no generation entitlement; lists but cannot run)"
+          "probe": "runs"
+        },
+        {
+          "id": "gemini-3.1-flash-lite",
+          "display": "gemini-3.1-flash-lite",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gemini-3.1-pro-low",
+          "display": "gemini-3.1-pro-low",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gemini-3.5-flash-extra-low",
+          "display": "gemini-3.5-flash-extra-low",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gemini-3.5-flash-low",
+          "display": "gemini-3.5-flash-low",
+          "context": {
+            "input_tokens": 2000000,
+            "output_tokens": 8192,
+            "context_window": 2000000,
+            "notes": "Gemini 3.0+ series with extended context"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gemini-pro-agent",
+          "display": "gemini-pro-agent",
+          "context": {
+            "input_tokens": 30720,
+            "output_tokens": 2048,
+            "context_window": 30720,
+            "notes": "Gemini 1.0 Pro"
+          },
+          "probe": "runs"
+        },
+        {
+          "id": "gpt-oss-120b-medium",
+          "display": "gpt-oss-120b-medium",
+          "context": {
+            "input_tokens": null,
+            "output_tokens": null,
+            "context_window": null,
+            "notes": "Context limits not available"
+          },
+          "probe": "runs"
         }
       ]
     }
@@ -556,7 +645,7 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "high",
-      "google_thinking_budget": 0
+      "google_thinking_budget": -1
     },
     {
       "id": 2,
@@ -565,7 +654,7 @@
       "anthropic_effort": null,
       "thinking_mode": null,
       "openai_reasoning_effort": null,
-      "google_thinking_budget": 0
+      "google_thinking_budget": -1
     },
     {
       "id": 3,
@@ -574,7 +663,7 @@
       "anthropic_effort": null,
       "thinking_mode": null,
       "openai_reasoning_effort": null,
-      "google_thinking_budget": 0
+      "google_thinking_budget": -1
     },
     {
       "id": 4,
@@ -583,7 +672,7 @@
       "anthropic_effort": null,
       "thinking_mode": null,
       "openai_reasoning_effort": "none",
-      "google_thinking_budget": 1024
+      "google_thinking_budget": -1
     },
     {
       "id": 7,
@@ -592,7 +681,7 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "xhigh",
-      "google_thinking_budget": 32768
+      "google_thinking_budget": -1
     },
     {
       "id": 8,
@@ -601,7 +690,7 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "xhigh",
-      "google_thinking_budget": 32768
+      "google_thinking_budget": -1
     },
     {
       "id": 9,
@@ -610,7 +699,7 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "xhigh",
-      "google_thinking_budget": 32768
+      "google_thinking_budget": -1
     },
     {
       "id": 10,
@@ -619,7 +708,7 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "xhigh",
-      "google_thinking_budget": 32768
+      "google_thinking_budget": -1
     },
     {
       "id": 11,
@@ -628,7 +717,7 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "xhigh",
-      "google_thinking_budget": 32768
+      "google_thinking_budget": -1
     },
     {
       "id": 12,
@@ -637,7 +726,7 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "xhigh",
-      "google_thinking_budget": 32768
+      "google_thinking_budget": -1
     },
     {
       "id": 13,
@@ -646,7 +735,7 @@
       "anthropic_effort": "high",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "high",
-      "google_thinking_budget": 16384
+      "google_thinking_budget": -1
     },
     {
       "id": 14,
@@ -664,7 +753,7 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "xhigh",
-      "google_thinking_budget": 32768
+      "google_thinking_budget": -1
     },
     {
       "id": 16,
@@ -673,7 +762,7 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "xhigh",
-      "google_thinking_budget": 32768
+      "google_thinking_budget": -1
     },
     {
       "id": 17,
@@ -682,7 +771,7 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "xhigh",
-      "google_thinking_budget": 32768
+      "google_thinking_budget": -1
     },
     {
       "id": 18,
@@ -691,7 +780,7 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "xhigh",
-      "google_thinking_budget": 32768
+      "google_thinking_budget": -1
     },
     {
       "id": 19,
@@ -700,7 +789,7 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "xhigh",
-      "google_thinking_budget": 32768
+      "google_thinking_budget": -1
     },
     {
       "id": 20,
@@ -709,7 +798,7 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "xhigh",
-      "google_thinking_budget": 32768
+      "google_thinking_budget": -1
     },
     {
       "id": 21,
@@ -718,7 +807,7 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "xhigh",
-      "google_thinking_budget": 32768
+      "google_thinking_budget": -1
     },
     {
       "id": 22,
@@ -727,7 +816,7 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "xhigh",
-      "google_thinking_budget": 32768
+      "google_thinking_budget": -1
     },
     {
       "id": 23,
@@ -736,7 +825,7 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "xhigh",
-      "google_thinking_budget": 32768
+      "google_thinking_budget": -1
     },
     {
       "id": 24,
@@ -745,7 +834,7 @@
       "anthropic_effort": "high",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "high",
-      "google_thinking_budget": 16384
+      "google_thinking_budget": -1
     },
     {
       "id": 25,
@@ -754,7 +843,7 @@
       "anthropic_effort": "high",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "high",
-      "google_thinking_budget": 16384
+      "google_thinking_budget": -1
     },
     {
       "id": 26,
@@ -763,7 +852,7 @@
       "anthropic_effort": "high",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "high",
-      "google_thinking_budget": 16384
+      "google_thinking_budget": -1
     },
     {
       "id": 27,
@@ -772,7 +861,7 @@
       "anthropic_effort": "high",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "high",
-      "google_thinking_budget": 16384
+      "google_thinking_budget": -1
     },
     {
       "id": 28,
@@ -781,7 +870,7 @@
       "anthropic_effort": "high",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "high",
-      "google_thinking_budget": 16384
+      "google_thinking_budget": -1
     },
     {
       "id": 29,
@@ -790,7 +879,7 @@
       "anthropic_effort": "high",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "high",
-      "google_thinking_budget": 16384
+      "google_thinking_budget": -1
     },
     {
       "id": 30,
@@ -799,7 +888,7 @@
       "anthropic_effort": "high",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "high",
-      "google_thinking_budget": 16384
+      "google_thinking_budget": -1
     },
     {
       "id": 31,
@@ -808,7 +897,7 @@
       "anthropic_effort": "high",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "high",
-      "google_thinking_budget": 16384
+      "google_thinking_budget": -1
     },
     {
       "id": 32,
@@ -817,7 +906,7 @@
       "anthropic_effort": "high",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "high",
-      "google_thinking_budget": 16384
+      "google_thinking_budget": -1
     },
     {
       "id": 33,
@@ -826,7 +915,7 @@
       "anthropic_effort": "high",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "high",
-      "google_thinking_budget": 16384
+      "google_thinking_budget": -1
     },
     {
       "id": 34,
@@ -853,7 +942,79 @@
       "anthropic_effort": "max",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "high",
-      "google_thinking_budget": null
+      "google_thinking_budget": -1
+    },
+    {
+      "id": 37,
+      "name": "music · lyric-writer",
+      "config_id": 418,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": -1
+    },
+    {
+      "id": 38,
+      "name": "music · lyric-refiner",
+      "config_id": 419,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": -1
+    },
+    {
+      "id": 39,
+      "name": "music · lyric-reviewer",
+      "config_id": 420,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": -1
+    },
+    {
+      "id": 40,
+      "name": "music · album-conceptualizer",
+      "config_id": 421,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": -1
+    },
+    {
+      "id": 41,
+      "name": "music · researcher-verifier",
+      "config_id": 422,
+      "anthropic_effort": "max",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "xhigh",
+      "google_thinking_budget": -1
+    },
+    {
+      "id": 42,
+      "name": "music · voice-checker",
+      "config_id": 423,
+      "anthropic_effort": "high",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "high",
+      "google_thinking_budget": -1
+    },
+    {
+      "id": 43,
+      "name": "music · mix-engineer",
+      "config_id": 424,
+      "anthropic_effort": "high",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "high",
+      "google_thinking_budget": -1
+    },
+    {
+      "id": 44,
+      "name": "music · mastering-engineer",
+      "config_id": 425,
+      "anthropic_effort": "high",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "high",
+      "google_thinking_budget": -1
     }
   ]
 }

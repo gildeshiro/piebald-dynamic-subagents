@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated": "2026-06-28T00:10:45.992Z",
+    "generated": "2026-08-23T03:02:18.688Z",
     "source": "refresh_provider_models (live)",
     "regenerate": "node control-plane/discover-models.mjs",
     "reasoning_note": "In the Piebald schema, reasoning for ALL engines is controlled by the PROFILE (the profile's generation_config stores anthropic.effort + openai.reasoning_effort + google.thinking_budget together). Selecting a profile = selecting reasoning. It is the only reasoning lever in our setup.",
@@ -11,13 +11,7 @@
       "high",
       "xhigh"
     ],
-    "openai_default_reasoning": "medium",
-    "probe": {
-      "date": "2026-06-28",
-      "source": "discover-models.mjs --with-probe (provider×model worker probe, default profile)",
-      "summary": "34/50 models actually run (200/completed); 16 list-only (error at generation)",
-      "semantics": "probe=runs => a worker completed with text. probe=lists-only => provider lists the model but it errors at generation (see probe_note). Snapshot; re-run with --with-probe to refresh. The pbroute hook validates EXISTENCE only, NOT probe status."
-    }
+    "openai_default_reasoning": "medium"
   },
   "providers": [
     {
@@ -26,173 +20,616 @@
       "engine_type": "google",
       "type": "antigravity_login",
       "status": "ok",
-      "model_count": 15,
+      "model_count": 18,
       "models": [
         {
           "id": "claude-opus-4-6-thinking",
-          "display": "claude-opus-4-6-thinking",
+          "display": "Claude Opus 4.6 (Thinking)",
           "context": {
-            "input_tokens": null,
-            "output_tokens": null,
             "context_window": null,
-            "notes": "Context limits not available"
-          },
-          "probe": "runs"
+            "input_tokens": null,
+            "notes": "Context limits not available",
+            "output_tokens": null
+          }
         },
         {
           "id": "claude-sonnet-4-6",
-          "display": "claude-sonnet-4-6",
+          "display": "Claude Sonnet 4.6 (Thinking)",
           "context": {
-            "input_tokens": null,
-            "output_tokens": null,
             "context_window": null,
-            "notes": "Context limits not available"
-          },
-          "probe": "runs"
+            "input_tokens": null,
+            "notes": "Context limits not available",
+            "output_tokens": null
+          }
         },
         {
           "id": "gemini-2.5-flash",
-          "display": "gemini-2.5-flash",
+          "display": "Gemini 3.1 Flash Lite",
           "context": {
-            "input_tokens": 1000000,
-            "output_tokens": 8192,
             "context_window": 1000000,
-            "notes": "Gemini 2.0 Flash with 1M context window"
-          },
-          "probe": "runs"
+            "input_tokens": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-2.5-flash-lite",
-          "display": "gemini-2.5-flash-lite",
+          "display": "Gemini 3.1 Flash Lite",
           "context": {
-            "input_tokens": 1000000,
-            "output_tokens": 8192,
             "context_window": 1000000,
-            "notes": "Gemini 2.0 Flash with 1M context window"
-          },
-          "probe": "runs"
+            "input_tokens": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-2.5-flash-thinking",
-          "display": "gemini-2.5-flash-thinking",
+          "display": "Gemini 3.1 Flash Lite",
           "context": {
-            "input_tokens": 1000000,
-            "output_tokens": 8192,
             "context_window": 1000000,
-            "notes": "Gemini 2.0 Flash with 1M context window"
-          },
-          "probe": "runs"
+            "input_tokens": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-2.5-pro",
-          "display": "gemini-2.5-pro",
+          "display": "Gemini 2.5 Pro",
           "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
             "context_window": 2000000,
-            "notes": "Gemini 2.0 Pro with 2M context window"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 503: No capacity available for model gemini-2.5-pro on the server"
+            "input_tokens": 2000000,
+            "notes": "Gemini 2.0 Pro with 2M context window",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-3-flash",
-          "display": "gemini-3-flash",
+          "display": "Gemini 3 Flash",
           "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
             "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-3-flash-agent",
-          "display": "gemini-3-flash-agent",
+          "display": "Gemini 3.5 Flash (High)",
           "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
             "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-3.1-flash-image",
-          "display": "gemini-3.1-flash-image",
+          "display": "Gemini 3.1 Flash Image",
           "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
             "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-3.1-flash-lite",
-          "display": "gemini-3.1-flash-lite",
+          "display": "Gemini 3.1 Flash Lite",
           "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
             "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-3.1-pro-low",
-          "display": "gemini-3.1-pro-low",
+          "display": "Gemini 3.1 Pro (Low)",
           "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
             "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-3.5-flash-extra-low",
-          "display": "gemini-3.5-flash-extra-low",
+          "display": "Gemini 3.5 Flash (Low)",
           "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
             "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-3.5-flash-low",
-          "display": "gemini-3.5-flash-low",
+          "display": "Gemini 3.5 Flash (Medium)",
           "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
             "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-3.6-flash-high",
+          "display": "Gemini 3.6 Flash (High)",
+          "context": {
+            "context_window": 2000000,
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-3.6-flash-low",
+          "display": "Gemini 3.6 Flash (Low)",
+          "context": {
+            "context_window": 2000000,
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-3.6-flash-medium",
+          "display": "Gemini 3.6 Flash (Medium)",
+          "context": {
+            "context_window": 2000000,
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-pro-agent",
-          "display": "gemini-pro-agent",
+          "display": "Gemini 3.1 Pro (High)",
           "context": {
-            "input_tokens": 30720,
-            "output_tokens": 2048,
             "context_window": 30720,
-            "notes": "Gemini 1.0 Pro"
-          },
-          "probe": "runs"
+            "input_tokens": 30720,
+            "notes": "Gemini 1.0 Pro",
+            "output_tokens": 2048
+          }
         },
         {
           "id": "gpt-oss-120b-medium",
-          "display": "gpt-oss-120b-medium",
+          "display": "GPT-OSS 120B (Medium)",
           "context": {
-            "input_tokens": null,
-            "output_tokens": null,
             "context_window": null,
-            "notes": "Context limits not available"
-          },
-          "probe": "runs"
+            "input_tokens": null,
+            "notes": "Context limits not available",
+            "output_tokens": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Antigravity: jean.mgcosta@gmail.com",
+      "engine_type": "google",
+      "type": "antigravity_login",
+      "status": "ok",
+      "model_count": 18,
+      "models": [
+        {
+          "id": "claude-opus-4-6-thinking",
+          "display": "Claude Opus 4.6 (Thinking)",
+          "context": {
+            "context_window": null,
+            "input_tokens": null,
+            "notes": "Context limits not available",
+            "output_tokens": null
+          }
+        },
+        {
+          "id": "claude-sonnet-4-6",
+          "display": "Claude Sonnet 4.6 (Thinking)",
+          "context": {
+            "context_window": null,
+            "input_tokens": null,
+            "notes": "Context limits not available",
+            "output_tokens": null
+          }
+        },
+        {
+          "id": "gemini-2.5-flash",
+          "display": "Gemini 3.1 Flash Lite",
+          "context": {
+            "context_window": 1000000,
+            "input_tokens": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-2.5-flash-lite",
+          "display": "Gemini 3.1 Flash Lite",
+          "context": {
+            "context_window": 1000000,
+            "input_tokens": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-2.5-flash-thinking",
+          "display": "Gemini 3.1 Flash Lite",
+          "context": {
+            "context_window": 1000000,
+            "input_tokens": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-2.5-pro",
+          "display": "Gemini 2.5 Pro",
+          "context": {
+            "context_window": 2000000,
+            "input_tokens": 2000000,
+            "notes": "Gemini 2.0 Pro with 2M context window",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-3-flash",
+          "display": "Gemini 3 Flash",
+          "context": {
+            "context_window": 2000000,
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-3-flash-agent",
+          "display": "Gemini 3.5 Flash (High)",
+          "context": {
+            "context_window": 2000000,
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-3.1-flash-image",
+          "display": "Gemini 3.1 Flash Image",
+          "context": {
+            "context_window": 2000000,
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-3.1-flash-lite",
+          "display": "Gemini 3.1 Flash Lite",
+          "context": {
+            "context_window": 2000000,
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-3.1-pro-low",
+          "display": "Gemini 3.1 Pro (Low)",
+          "context": {
+            "context_window": 2000000,
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-3.5-flash-extra-low",
+          "display": "Gemini 3.5 Flash (Low)",
+          "context": {
+            "context_window": 2000000,
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-3.5-flash-low",
+          "display": "Gemini 3.5 Flash (Medium)",
+          "context": {
+            "context_window": 2000000,
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-3.6-flash-high",
+          "display": "Gemini 3.6 Flash (High)",
+          "context": {
+            "context_window": 2000000,
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-3.6-flash-low",
+          "display": "Gemini 3.6 Flash (Low)",
+          "context": {
+            "context_window": 2000000,
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-3.6-flash-medium",
+          "display": "Gemini 3.6 Flash (Medium)",
+          "context": {
+            "context_window": 2000000,
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
+        },
+        {
+          "id": "gemini-pro-agent",
+          "display": "Gemini 3.1 Pro (High)",
+          "context": {
+            "context_window": 30720,
+            "input_tokens": 30720,
+            "notes": "Gemini 1.0 Pro",
+            "output_tokens": 2048
+          }
+        },
+        {
+          "id": "gpt-oss-120b-medium",
+          "display": "GPT-OSS 120B (Medium)",
+          "context": {
+            "context_window": null,
+            "input_tokens": null,
+            "notes": "Context limits not available",
+            "output_tokens": null
+          }
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "ChatGPT Plus: shirojpj@gmail.com",
+      "engine_type": "openai_responses",
+      "type": "open_ai_login",
+      "status": "empty",
+      "model_count": 0,
+      "models": []
+    },
+    {
+      "id": 3,
+      "name": "Claude Max: gildeshiro@gmail.com",
+      "engine_type": "claude_code",
+      "type": "anthropic_login",
+      "status": "ok",
+      "model_count": 12,
+      "models": [
+        {
+          "id": "claude-opus-5",
+          "display": "Claude Opus 5",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Enterprise customers may access 1M+ token processing",
+            "output_tokens": 8000
+          }
+        },
+        {
+          "id": "claude-sonnet-5",
+          "display": "Claude Sonnet 5",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Enterprise customers may access 1M+ token processing",
+            "output_tokens": 8000
+          }
+        },
+        {
+          "id": "claude-fable-5",
+          "display": "Claude Fable 5",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Enterprise customers may access 1M+ token processing",
+            "output_tokens": 8000
+          }
+        },
+        {
+          "id": "claude-opus-4-8",
+          "display": "Claude Opus 4.8",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Claude 4 series with extended output capabilities",
+            "output_tokens": 64000
+          }
+        },
+        {
+          "id": "claude-opus-4-7",
+          "display": "Claude Opus 4.7",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Claude 4 series with extended output capabilities",
+            "output_tokens": 64000
+          }
+        },
+        {
+          "id": "claude-sonnet-4-6",
+          "display": "Claude Sonnet 4.6",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Claude 4 series with extended output capabilities",
+            "output_tokens": 64000
+          }
+        },
+        {
+          "id": "claude-opus-4-6",
+          "display": "Claude Opus 4.6",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Claude 4 series with extended output capabilities",
+            "output_tokens": 64000
+          }
+        },
+        {
+          "id": "claude-opus-4-5-20251101",
+          "display": "Claude Opus 4.5",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Claude 4 series with extended output capabilities",
+            "output_tokens": 64000
+          }
+        },
+        {
+          "id": "claude-haiku-4-5-20251001",
+          "display": "Claude Haiku 4.5",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Enterprise customers may access 1M+ token processing",
+            "output_tokens": 8000
+          }
+        },
+        {
+          "id": "claude-sonnet-4-5-20250929",
+          "display": "Claude Sonnet 4.5",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Claude 4 series with extended output capabilities",
+            "output_tokens": 64000
+          }
+        },
+        {
+          "id": "opus[1m]",
+          "display": "opus[1m]",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Enterprise customers may access 1M+ token processing",
+            "output_tokens": 8000
+          }
+        },
+        {
+          "id": "sonnet[1m]",
+          "display": "sonnet[1m]",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Enterprise customers may access 1M+ token processing",
+            "output_tokens": 8000
+          }
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "name": "Claude Pro: universe.imovel1@gmail.com",
+      "engine_type": "claude_code",
+      "type": "anthropic_login",
+      "status": "ok",
+      "model_count": 9,
+      "models": [
+        {
+          "id": "claude-fable-5",
+          "display": "Claude Fable 5",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Enterprise customers may access 1M+ token processing",
+            "output_tokens": 8000
+          }
+        },
+        {
+          "id": "claude-opus-4-8",
+          "display": "Claude Opus 4.8",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Claude 4 series with extended output capabilities",
+            "output_tokens": 64000
+          }
+        },
+        {
+          "id": "claude-opus-4-7",
+          "display": "Claude Opus 4.7",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Claude 4 series with extended output capabilities",
+            "output_tokens": 64000
+          }
+        },
+        {
+          "id": "claude-opus-4-6",
+          "display": "Claude Opus 4.6",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Claude 4 series with extended output capabilities",
+            "output_tokens": 64000
+          }
+        },
+        {
+          "id": "claude-sonnet-4-6",
+          "display": "Claude Sonnet 4.6",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Claude 4 series with extended output capabilities",
+            "output_tokens": 64000
+          }
+        },
+        {
+          "id": "claude-opus-4-5-20251101",
+          "display": "Claude Opus 4.5",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Claude 4 series with extended output capabilities",
+            "output_tokens": 64000
+          }
+        },
+        {
+          "id": "claude-opus-4-1-20250805",
+          "display": "Claude Opus 4.1",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Claude 4 series with extended output capabilities",
+            "output_tokens": 64000
+          }
+        },
+        {
+          "id": "claude-sonnet-4-5-20250929",
+          "display": "Claude Sonnet 4.5",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Claude 4 series with extended output capabilities",
+            "output_tokens": 64000
+          }
+        },
+        {
+          "id": "claude-haiku-4-5-20251001",
+          "display": "Claude Haiku 4.5",
+          "context": {
+            "context_window": 200000,
+            "input_tokens": 200000,
+            "notes": "Enterprise customers may access 1M+ token processing",
+            "output_tokens": 8000
+          }
         }
       ]
     },
@@ -208,431 +645,81 @@
           "id": "gemini-3.1-pro-preview",
           "display": "gemini-3.1-pro-preview",
           "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
             "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 404: Requested entity was not found."
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-3.1-pro-preview-customtools",
           "display": "gemini-3.1-pro-preview-customtools",
           "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
             "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 404: Requested entity was not found."
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-3-pro-preview",
           "display": "gemini-3-pro-preview",
           "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
             "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 404: Requested entity was not found."
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-3-flash-preview",
           "display": "gemini-3-flash-preview",
           "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
             "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 404: Requested entity was not found."
+            "input_tokens": 2000000,
+            "notes": "Gemini 3.0+ series with extended context",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-2.5-pro",
           "display": "gemini-2.5-pro",
           "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
             "context_window": 2000000,
-            "notes": "Gemini 2.0 Pro with 2M context window"
-          },
-          "probe": "runs"
+            "input_tokens": 2000000,
+            "notes": "Gemini 2.0 Pro with 2M context window",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-2.5-flash",
           "display": "gemini-2.5-flash",
           "context": {
-            "input_tokens": 1000000,
-            "output_tokens": 8192,
             "context_window": 1000000,
-            "notes": "Gemini 2.0 Flash with 1M context window"
-          },
-          "probe": "runs"
+            "input_tokens": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-2.5-flash-lite",
           "display": "gemini-2.5-flash-lite",
           "context": {
-            "input_tokens": 1000000,
-            "output_tokens": 8192,
             "context_window": 1000000,
-            "notes": "Gemini 2.0 Flash with 1M context window"
-          },
-          "probe": "runs"
+            "input_tokens": 1000000,
+            "notes": "Gemini 2.0 Flash with 1M context window",
+            "output_tokens": 8192
+          }
         },
         {
           "id": "gemini-2.0-flash",
           "display": "gemini-2.0-flash",
           "context": {
-            "input_tokens": 1000000,
-            "output_tokens": 8192,
             "context_window": 1000000,
-            "notes": "Gemini 2.0 Flash with 1M context window"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 404: Requested entity was not found."
-        }
-      ]
-    },
-    {
-      "id": 4,
-      "name": "ChatGPT Plus: shirojpj@gmail.com",
-      "engine_type": "openai_responses",
-      "type": "open_ai_login",
-      "status": "ok",
-      "model_count": 3,
-      "models": [
-        {
-          "id": "gpt-5.5",
-          "display": "GPT-5.5",
-          "context": {
-            "input_tokens": null,
-            "output_tokens": null,
-            "context_window": 272000,
-            "notes": null
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "gpt-5.4-mini",
-          "display": "GPT-5.4-Mini",
-          "context": {
-            "input_tokens": null,
-            "output_tokens": null,
-            "context_window": 272000,
-            "notes": null
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "codex-auto-review",
-          "display": "Codex Auto Review",
-          "context": {
-            "input_tokens": null,
-            "output_tokens": null,
-            "context_window": 272000,
-            "notes": null
-          },
-          "probe": "runs"
-        }
-      ]
-    },
-    {
-      "id": 3,
-      "name": "Claude Max: gildeshiro@gmail.com",
-      "engine_type": "claude_code",
-      "type": "anthropic_login",
-      "status": "ok",
-      "model_count": 9,
-      "models": [
-        {
-          "id": "claude-fable-5",
-          "display": "Claude Fable 5",
-          "context": {
-            "input_tokens": 200000,
-            "output_tokens": 8000,
-            "context_window": 200000,
-            "notes": "Enterprise customers may access 1M+ token processing"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 401: Invalid authentication credentials"
-        },
-        {
-          "id": "claude-opus-4-8",
-          "display": "Claude Opus 4.8",
-          "context": {
-            "input_tokens": 200000,
-            "output_tokens": 64000,
-            "context_window": 200000,
-            "notes": "Claude 4 series with extended output capabilities"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 401: Invalid authentication credentials"
-        },
-        {
-          "id": "claude-opus-4-7",
-          "display": "Claude Opus 4.7",
-          "context": {
-            "input_tokens": 200000,
-            "output_tokens": 64000,
-            "context_window": 200000,
-            "notes": "Claude 4 series with extended output capabilities"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 401: Invalid authentication credentials"
-        },
-        {
-          "id": "claude-opus-4-6",
-          "display": "Claude Opus 4.6",
-          "context": {
-            "input_tokens": 200000,
-            "output_tokens": 64000,
-            "context_window": 200000,
-            "notes": "Claude 4 series with extended output capabilities"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 401: Invalid authentication credentials"
-        },
-        {
-          "id": "claude-sonnet-4-6",
-          "display": "Claude Sonnet 4.6",
-          "context": {
-            "input_tokens": 200000,
-            "output_tokens": 64000,
-            "context_window": 200000,
-            "notes": "Claude 4 series with extended output capabilities"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 401: Invalid authentication credentials"
-        },
-        {
-          "id": "claude-opus-4-5-20251101",
-          "display": "Claude Opus 4.5",
-          "context": {
-            "input_tokens": 200000,
-            "output_tokens": 64000,
-            "context_window": 200000,
-            "notes": "Claude 4 series with extended output capabilities"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 401: Invalid authentication credentials"
-        },
-        {
-          "id": "claude-opus-4-1-20250805",
-          "display": "Claude Opus 4.1",
-          "context": {
-            "input_tokens": 200000,
-            "output_tokens": 64000,
-            "context_window": 200000,
-            "notes": "Claude 4 series with extended output capabilities"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 401: Invalid authentication credentials"
-        },
-        {
-          "id": "claude-sonnet-4-5-20250929",
-          "display": "Claude Sonnet 4.5",
-          "context": {
-            "input_tokens": 200000,
-            "output_tokens": 64000,
-            "context_window": 200000,
-            "notes": "Claude 4 series with extended output capabilities"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 401: Invalid authentication credentials"
-        },
-        {
-          "id": "claude-haiku-4-5-20251001",
-          "display": "Claude Haiku 4.5",
-          "context": {
-            "input_tokens": 200000,
-            "output_tokens": 8000,
-            "context_window": 200000,
-            "notes": "Enterprise customers may access 1M+ token processing"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 401: Invalid authentication credentials"
-        }
-      ]
-    },
-    {
-      "id": 2,
-      "name": "Antigravity: jean.mgcosta@gmail.com",
-      "engine_type": "google",
-      "type": "antigravity_login",
-      "status": "ok",
-      "model_count": 15,
-      "models": [
-        {
-          "id": "claude-opus-4-6-thinking",
-          "display": "claude-opus-4-6-thinking",
-          "context": {
-            "input_tokens": null,
-            "output_tokens": null,
-            "context_window": null,
-            "notes": "Context limits not available"
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "claude-sonnet-4-6",
-          "display": "claude-sonnet-4-6",
-          "context": {
-            "input_tokens": null,
-            "output_tokens": null,
-            "context_window": null,
-            "notes": "Context limits not available"
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "gemini-2.5-flash",
-          "display": "gemini-2.5-flash",
-          "context": {
             "input_tokens": 1000000,
-            "output_tokens": 8192,
-            "context_window": 1000000,
-            "notes": "Gemini 2.0 Flash with 1M context window"
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "gemini-2.5-flash-lite",
-          "display": "gemini-2.5-flash-lite",
-          "context": {
-            "input_tokens": 1000000,
-            "output_tokens": 8192,
-            "context_window": 1000000,
-            "notes": "Gemini 2.0 Flash with 1M context window"
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "gemini-2.5-flash-thinking",
-          "display": "gemini-2.5-flash-thinking",
-          "context": {
-            "input_tokens": 1000000,
-            "output_tokens": 8192,
-            "context_window": 1000000,
-            "notes": "Gemini 2.0 Flash with 1M context window"
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "gemini-2.5-pro",
-          "display": "gemini-2.5-pro",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 2.0 Pro with 2M context window"
-          },
-          "probe": "lists-only",
-          "probe_note": "HTTP 503: No capacity available for model gemini-2.5-pro on the server"
-        },
-        {
-          "id": "gemini-3-flash",
-          "display": "gemini-3-flash",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "gemini-3-flash-agent",
-          "display": "gemini-3-flash-agent",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "gemini-3.1-flash-image",
-          "display": "gemini-3.1-flash-image",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "gemini-3.1-flash-lite",
-          "display": "gemini-3.1-flash-lite",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "gemini-3.1-pro-low",
-          "display": "gemini-3.1-pro-low",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "gemini-3.5-flash-extra-low",
-          "display": "gemini-3.5-flash-extra-low",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "gemini-3.5-flash-low",
-          "display": "gemini-3.5-flash-low",
-          "context": {
-            "input_tokens": 2000000,
-            "output_tokens": 8192,
-            "context_window": 2000000,
-            "notes": "Gemini 3.0+ series with extended context"
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "gemini-pro-agent",
-          "display": "gemini-pro-agent",
-          "context": {
-            "input_tokens": 30720,
-            "output_tokens": 2048,
-            "context_window": 30720,
-            "notes": "Gemini 1.0 Pro"
-          },
-          "probe": "runs"
-        },
-        {
-          "id": "gpt-oss-120b-medium",
-          "display": "gpt-oss-120b-medium",
-          "context": {
-            "input_tokens": null,
-            "output_tokens": null,
-            "context_window": null,
-            "notes": "Context limits not available"
-          },
-          "probe": "runs"
+            "notes": "Gemini 2.0 Flash with 1M context window",
+            "output_tokens": 8192
+          }
         }
       ]
     }
@@ -938,11 +1025,11 @@
     {
       "id": 36,
       "name": "F5-Default",
-      "config_id": 407,
-      "anthropic_effort": "max",
+      "config_id": 1160,
+      "anthropic_effort": "xhigh",
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "high",
-      "google_thinking_budget": -1
+      "google_thinking_budget": 0
     },
     {
       "id": 37,
@@ -1015,6 +1102,24 @@
       "thinking_mode": "adaptive",
       "openai_reasoning_effort": "high",
       "google_thinking_budget": -1
+    },
+    {
+      "id": 46,
+      "name": "F5-Universe",
+      "config_id": 1159,
+      "anthropic_effort": "xhigh",
+      "thinking_mode": "adaptive",
+      "openai_reasoning_effort": "high",
+      "google_thinking_budget": 0
+    },
+    {
+      "id": 47,
+      "name": "OpenCues",
+      "config_id": 1181,
+      "anthropic_effort": null,
+      "thinking_mode": null,
+      "openai_reasoning_effort": null,
+      "google_thinking_budget": null
     }
   ]
 }

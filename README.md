@@ -97,7 +97,7 @@ Everything rests on three discoveries about Piebald's `app.db`
 1. **Subagent routing is persisted** — `subagent_provider_id` / `model` /
    `profile_id` live in the database; the hook writes to them before the subagent is created.
 2. **Profiles live in the database** (`profiles` → `generation_configs` →
-   `override_gen_cfg_data.system_prompt` + per-engine effort) — hence `profiles.mjs`
+   `base_gen_cfg_data.system_prompt` + per-engine effort) — hence `profiles.mjs`
    can create/edit them programmatically.
 3. **Web-mode exposes an authenticated WebSocket** for engine commands.
 

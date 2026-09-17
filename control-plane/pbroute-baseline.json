@@ -1,5 +1,5 @@
 {
-  "provider": "3",
-  "model": "claude-sonnet-4-6",
-  "profile": "36"
+  "provider": "1",
+  "model": "claude-sonnet-5",
+  "profile": "1"
 }
